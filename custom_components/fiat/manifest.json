@@ -1,0 +1,19 @@
+{
+    "domain": "fiat",
+    "name": "Fiat Uconnect",
+    "codeowners": [
+        "@blind-oracle"
+    ],
+    "config_flow": true,
+    "documentation": "https://github.com/blind-oracle/hass-fiat",
+    "integration_type": "hub",
+    "iot_class": "cloud_polling",
+    "issue_tracker": "https://github.com/blind-oracle/hass-fiat/issues",
+    "loggers": [
+        "fiat"
+    ],
+    "requirements": [
+        "python_fiat_api>=0.1"
+    ],
+    "version": "0.1"
+}
