@@ -20,12 +20,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
+from pyfiat.api import API
+
 from .const import (
     BRANDS,
-    CONF_BRAND,
-    CONF_DEEP_REFRESH_INTERVAL,
+    BRANDS_API,
+    CONF_BRAND_REGION,
     DEFAULT_SCAN_INTERVAL,
-    DEFAULT_DEEP_REFRESH_INTERVAL,
     DEFAULT_PIN,
     DOMAIN,
 )
@@ -37,7 +38,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
         vol.Optional(CONF_PIN, default=DEFAULT_PIN): str,
-        vol.Required(CONF_BRAND): vol.In(BRANDS),
+        vol.Required(CONF_BRAND_REGION): vol.In(BRANDS),
     }
 )
 
@@ -45,21 +46,28 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]):
     """Validate the user input allows us to connect."""
 
-    token = "TODO"
+    try:
+        api = API(email=user_input[CONF_USERNAME],
+                  password=user_input[CONF_PASSWORD],
+                  pin=user_input[CONF_PIN],
+                  brand=BRANDS_API[BRANDS[user_input[CONF_BRAND_REGION]]]
+                  )
 
-    if token is None:
+        await hass.async_add_executor_job(api.login)
+    except:
         raise InvalidAuth
-
-    return token
 
 
 class FiatOptionFlowHandler(config_entries.OptionsFlow):
     """Handle an option flow for Fiat"""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
+    @property
+    def config_entry(self):
+        return self.hass.config_entries.async_get_entry(self.handler)
+
+    def __init__(self) -> None:
         """Initialize option flow instance."""
 
-        self.config_entry = config_entry
         self.schema = vol.Schema(
             {
                 vol.Required(
@@ -67,18 +75,13 @@ class FiatOptionFlowHandler(config_entries.OptionsFlow):
                     default=self.config_entry.options.get(
                         CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL,
                     ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=15, max=999)),
-                vol.Required(
-                    CONF_DEEP_REFRESH_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_DEEP_REFRESH_INTERVAL, DEFAULT_DEEP_REFRESH_INTERVAL,
-                    ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=90, max=9999)),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=999)),
             }
         )
 
     async def async_step_init(self, user_input=None) -> FlowResult:
         """Handle options init setup."""
+
         if user_input is not None:
             return self.async_create_entry(
                 title=self.config_entry.title, data=user_input
@@ -97,7 +100,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry):
         """Initiate options flow instance."""
-        return FiatOptionFlowHandler(config_entry)
+        return FiatOptionFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -120,7 +123,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "unknown"
         else:
             if self.reauth_entry is None:
-                title = f"{BRANDS[user_input[CONF_BRAND]]} {
+                title = f"{BRANDS[user_input[CONF_BRAND_REGION]]} {
                     user_input[CONF_USERNAME]}"
                 await self.async_set_unique_id(
                     hashlib.sha256(title.encode("utf-8")).hexdigest()

@@ -1,0 +1,152 @@
+update:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+engine_on:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+engine_off:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+comfort_on:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+comfort_off:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+hvac_on:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+hvac_off:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+precond_on:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+precond_off:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+lights:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+lights_horn:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+doors_lock:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+doors_unlock:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+trunk_lock:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+trunk_unlock:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+liftgate_lock:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+liftgate_unlock:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+charge_now:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+deep_refresh:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat
+
+refresh_location:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: fiat

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from typing import Final
-from datetime import date
 
 from pyfiat.client import Vehicle
 
@@ -12,22 +11,20 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
-    SensorStateClass,
 )
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricPotential,
     UnitOfLength,
-    UnitOfEnergy,
-    UnitOfPower,
     UnitOfTime,
+    UnitOfPressure,
 )
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, UNIT_DYNAMIC
 from .entity import FiatEntity
 from .coordinator import FiatDataUpdateCoordinator
 
@@ -39,14 +36,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
         name="Odometer",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
-        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="distance_to_empty",
         name="Driving Range Left",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
-        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="state_of_charge",
@@ -55,17 +52,37 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.BATTERY,
     ),
     SensorEntityDescription(
+        key="charging_level",
+        name="Charger Type",
+    ),
+    SensorEntityDescription(
+        key="charging_level_preference",
+        name="Charging Level Pref",
+    ),
+    SensorEntityDescription(
         key="battery_voltage",
-        name="12V Battery Voltage",
+        name="12V Battery",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
+    ),
+    SensorEntityDescription(
+        key="time_to_fully_charge_l2",
+        name="Time to Charge L2",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
+    ),
+    SensorEntityDescription(
+        key="time_to_fully_charge_l3",
+        name="Time to Charge L3",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=SensorDeviceClass.DURATION,
     ),
     SensorEntityDescription(
         key="distance_to_service",
         name="Distance to service",
         icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DISTANCE,
-        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="days_to_service",
@@ -73,6 +90,34 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
         icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.DAYS,
+    ),
+    SensorEntityDescription(
+        key="wheel_front_left_pressure",
+        name="Wheel Front Left Pressure",
+        icon="mdi:tire",
+        device_class=SensorDeviceClass.PRESSURE,
+        native_unit_of_measurement=UNIT_DYNAMIC,
+    ),
+    SensorEntityDescription(
+        key="wheel_front_right_pressure",
+        name="Wheel Front Right Pressure",
+        icon="mdi:tire",
+        device_class=SensorDeviceClass.PRESSURE,
+        native_unit_of_measurement=UNIT_DYNAMIC,
+    ),
+    SensorEntityDescription(
+        key="wheel_rear_left_pressure",
+        name="Wheel Rear Left Pressure",
+        icon="mdi:tire",
+        device_class=SensorDeviceClass.PRESSURE,
+        native_unit_of_measurement=UNIT_DYNAMIC,
+    ),
+    SensorEntityDescription(
+        key="wheel_rear_right_pressure",
+        name="Wheel Rear Right Pressure",
+        icon="mdi:tire",
+        device_class=SensorDeviceClass.PRESSURE,
+        native_unit_of_measurement=UNIT_DYNAMIC,
     ),
 )
 
@@ -125,5 +170,8 @@ class FiatSensor(SensorEntity, FiatEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit the value was reported in by the sensor"""
+
+        if self._description.native_unit_of_measurement == UNIT_DYNAMIC:
+            return getattr(self.vehicle, f"{self._key}_unit")
 
         return self._description.native_unit_of_measurement

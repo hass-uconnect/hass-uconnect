@@ -30,6 +30,7 @@ class FiatBinarySensorEntityDescription(BinarySensorEntityDescription):
     """A class that describes custom binary sensor entities."""
 
     is_on: Callable[[Vehicle], bool] | None = None
+    postprocess: Callable[[bool], bool] | None = None
     on_icon: str | None = None
     off_icon: str | None = None
 
@@ -38,100 +39,107 @@ SENSOR_DESCRIPTIONS: Final[tuple[FiatBinarySensorEntityDescription, ...]] = (
     FiatBinarySensorEntityDescription(
         key="ignition_on",
         name="Ignition",
-        is_on=lambda vehicle: vehicle.ignition_on,
         on_icon="mdi:engine",
         off_icon="mdi:engine-off",
+        device_class=BinarySensorDeviceClass.POWER,
+    ),
+    FiatBinarySensorEntityDescription(
+        key="ev_running",
+        name="EV Running",
+        on_icon="mdi:engine",
+        off_icon="mdi:engine-off",
+        device_class=BinarySensorDeviceClass.POWER,
     ),
     FiatBinarySensorEntityDescription(
         key="door_driver_locked",
-        name="Driver door is locked",
-        is_on=lambda vehicle: not vehicle.doors['DRIVER'].locked,
-        on_icon="mdi:car-door",
-        off_icon="mdi:car-door",
-        device_class=BinarySensorDeviceClass.DOOR,
+        name="Door Driver",
+        postprocess=lambda x: not x,
+        on_icon="mdi:car-door-lock",
+        off_icon="mdi:car-door-lock-open",
+        device_class=BinarySensorDeviceClass.LOCK,
     ),
     FiatBinarySensorEntityDescription(
         key="door_passenger_locked",
-        name="Passenger door is locked",
-        is_on=lambda vehicle: not vehicle.doors['PASSENGER'].locked,
-        on_icon="mdi:car-door",
-        off_icon="mdi:car-door",
-        device_class=BinarySensorDeviceClass.DOOR,
+        name="Door Passenger",
+        postprocess=lambda x: not x,
+        on_icon="mdi:car-door-lock",
+        off_icon="mdi:car-door-lock-open",
+        device_class=BinarySensorDeviceClass.LOCK,
     ),
     FiatBinarySensorEntityDescription(
         key="door_rear_left_locked",
-        name="Rear left door is locked",
-        is_on=lambda vehicle: not vehicle.doors['REAR_LEFT'].locked,
-        on_icon="mdi:car-door",
-        off_icon="mdi:car-door",
-        device_class=BinarySensorDeviceClass.DOOR,
+        name="Door Rear Left",
+        postprocess=lambda x: not x,
+        on_icon="mdi:car-door-lock",
+        off_icon="mdi:car-door-lock-open",
+        device_class=BinarySensorDeviceClass.LOCK,
     ),
     FiatBinarySensorEntityDescription(
         key="door_rear_right_locked",
-        name="Rear right door is locked",
-        is_on=lambda vehicle: not vehicle.doors['REAR_RIGHT'].locked,
-        on_icon="mdi:car-door",
-        off_icon="mdi:car-door",
-        device_class=BinarySensorDeviceClass.DOOR,
+        name="Door Rear Right",
+        postprocess=lambda x: not x,
+        on_icon="mdi:car-door-lock",
+        off_icon="mdi:car-door-lock-open",
+        device_class=BinarySensorDeviceClass.LOCK,
     ),
     FiatBinarySensorEntityDescription(
         key="trunk_locked",
-        name="Trunk is locked",
-        is_on=lambda vehicle: not vehicle.trunk_locked,
+        name="Trunk",
+        postprocess=lambda x: not x,
         on_icon="mdi:car-back",
         off_icon="mdi:car-back",
-        device_class=BinarySensorDeviceClass.DOOR,
+        device_class=BinarySensorDeviceClass.LOCK,
     ),
     FiatBinarySensorEntityDescription(
-        key="driver_window_closed",
-        name="Driver window is closed",
-        is_on=lambda vehicle: not vehicle.windows['DRIVER'].closed,
+        key="window_driver_closed",
+        name="Window Driver",
+        postprocess=lambda x: not x,
         on_icon="mdi:car-door",
         off_icon="mdi:car-door",
         device_class=BinarySensorDeviceClass.WINDOW,
     ),
     FiatBinarySensorEntityDescription(
-        key="passenger_window_closed",
-        name="Passenger window is closed",
-        is_on=lambda vehicle: not vehicle.windows['PASSENGER'].closed,
+        key="window_passenger_closed",
+        name="Window Passenger",
+        postprocess=lambda x: not x,
         on_icon="mdi:car-door",
         off_icon="mdi:car-door",
         device_class=BinarySensorDeviceClass.WINDOW,
     ),
     FiatBinarySensorEntityDescription(
-        key="charger_is_plugged_in",
-        name="EV charger is plugged in",
-        is_on=lambda vehicle: vehicle.plugged_in,
+        key="plugged_in",
+        name="EV Charger",
         device_class=BinarySensorDeviceClass.PLUG,
     ),
     FiatBinarySensorEntityDescription(
-        key="tire_pressure_front_left_ok",
-        name="Tire Pressure - Front Left is ok",
-        is_on=lambda vehicle: not vehicle.wheels['FL'].status_normal,
+        key="charging",
+        name="Charging",
+        device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
+    ),
+    FiatBinarySensorEntityDescription(
+        key="wheel_front_left_pressure_warning",
+        name="Tire Pressure Front Left Warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     FiatBinarySensorEntityDescription(
-        key="tire_pressure_front_right_ok",
-        name="Tire Pressure - Front Right is ok",
-        is_on=lambda vehicle: not vehicle.wheels['FR'].status_normal,
+        key="wheel_front_right_pressure_warning",
+        name="Tire Pressure Front Right Warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     FiatBinarySensorEntityDescription(
-        key="tire_pressure_rear_right_ok",
-        name="Tire Pressure - Rear Right is ok",
-        is_on=lambda vehicle: not vehicle.wheels['RR'].status_normal,
+        key="wheel_rear_right_pressure_warning",
+        name="Tire Pressure Rear Right Warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     FiatBinarySensorEntityDescription(
-        key="tire_pressure_rear_left_ok",
-        name="Tire Pressure - Rear Left is ok",
-        is_on=lambda vehicle: not vehicle.wheels['RL'].status_normal,
+        key="wheel_rear_left_pressure_warning",
+        name="Tire Pressure Rear Left Warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
@@ -151,14 +159,13 @@ async def async_setup_entry(
 
     for vehicle in coordinator.client.vehicles.values():
         for description in SENSOR_DESCRIPTIONS:
-            if description.is_on is not None and description.is_on(vehicle) is not None:
+            if getattr(vehicle, description.key) is not None:
                 entities.append(
                     FiatBinarySensor(
                         coordinator, description, vehicle)
                 )
 
     async_add_entities(entities)
-
     return True
 
 
@@ -173,6 +180,8 @@ class FiatBinarySensor(BinarySensorEntity, FiatEntity):
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, vehicle)
+        self.key = description.key
+        self.postprocess = description.postprocess
         self.entity_description: FiatBinarySensorEntityDescription = description
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
         self._attr_name = f"{vehicle.make} {
@@ -183,9 +192,14 @@ class FiatBinarySensor(BinarySensorEntity, FiatEntity):
         """Return true if the binary sensor is on."""
 
         if self.entity_description.is_on is not None:
-            return self.entity_description.is_on(self.vehicle)
+            v = self.entity_description.is_on(self.vehicle)
+        else:
+            v = getattr(self.vehicle, self.key)
 
-        return None
+        if self.postprocess is not None:
+            v = self.postprocess(v)
+
+        return v
 
     @property
     def icon(self):

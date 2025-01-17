@@ -7,6 +7,7 @@ import traceback
 import logging
 
 from pyfiat import Client
+from pyfiat.command import Command
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
@@ -19,13 +20,12 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_BRAND,
-    CONF_DEEP_REFRESH_INTERVAL,
+    CONF_BRAND_REGION,
+    BRANDS,
+    BRANDS_API,
     DEFAULT_SCAN_INTERVAL,
-    DEFAULT_DEEP_REFRESH_INTERVAL,
     DOMAIN,
 )
 
@@ -43,18 +43,11 @@ class FiatDataUpdateCoordinator(DataUpdateCoordinator):
             email=config_entry.data.get(CONF_USERNAME),
             password=config_entry.data.get(CONF_PASSWORD),
             pin=config_entry.data.get(CONF_PIN),
+            brand=BRANDS_API[BRANDS[config_entry.data.get(CONF_BRAND_REGION)]],
         )
 
-        self.refresh_interval: int = (
-            config_entry.options.get(
-                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
-        )
-        self.deep_refresh_interval: int = (
-            config_entry.options.get(
-                CONF_DEEP_REFRESH_INTERVAL, DEFAULT_DEEP_REFRESH_INTERVAL
-            )
-            * 60
-        )
+        self.refresh_interval: int = config_entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
 
         super().__init__(
             hass,
@@ -63,6 +56,7 @@ class FiatDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(
                 seconds=self.refresh_interval
             ),
+            always_update=True,
         )
 
     async def _async_update_data(self):
@@ -81,4 +75,9 @@ class FiatDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_update_all(self) -> None:
         """Update vehicle data."""
 
-        self.client.refresh()
+        await self.hass.async_add_executor_job(self.client.refresh)
+
+    async def async_command(self, vin: str, cmd: Command) -> None:
+        """Execute the given command"""
+
+        await self.hass.async_add_executor_job(self.client.api.command, vin, cmd)

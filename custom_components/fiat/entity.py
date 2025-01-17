@@ -6,7 +6,7 @@ from homeassistant.helpers.entity import DeviceInfo
 
 from pyfiat.client import Vehicle
 
-from .const import BRANDS, DOMAIN
+from .const import DOMAIN
 
 
 class FiatEntity(CoordinatorEntity):
@@ -25,5 +25,6 @@ class FiatEntity(CoordinatorEntity):
             identifiers={(DOMAIN, self.vehicle.vin)},
             manufacturer=self.vehicle.make,
             model=self.vehicle.make,
-            name=self.vehicle.model,
+            name=f"{self.vehicle.make} {
+                self.vehicle.nickname or self.vehicle.model}",
         )
