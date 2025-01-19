@@ -6,12 +6,11 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .coordinator import FiatDataUpdateCoordinator
 from .services import async_setup_services, async_unload_services
-
-_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[str] = [
     Platform.BINARY_SENSOR,
@@ -19,6 +18,8 @@ PLATFORMS: list[str] = [
     Platform.DEVICE_TRACKER,
     Platform.LOCK,
 ]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config_entry: ConfigEntry):
