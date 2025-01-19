@@ -6,16 +6,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate-hacs:
-    runs-on: "ubuntu-latest"
+  validate:
+    runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v4
       - name: HACS validation
         uses: "hacs/action@main"
         with:
           category: "integration"
-
-  validate:
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v3"
-      - uses: home-assistant/actions/hassfest@master
+      - name: HASS validation
+        uses: home-assistant/actions/hassfest@master

@@ -1,0 +1,17 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ncipollo/release-action@v1
+      with:
+        makeLatest: true
+        body: "HASS-Fiat release"
