@@ -1,0 +1,21 @@
+name: Validate Integration
+
+on:
+  push: 
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate-hacs:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: HACS validation
+        uses: "hacs/action@main"
+        with:
+          category: "integration"
+
+  validate:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: home-assistant/actions/hassfest@master
