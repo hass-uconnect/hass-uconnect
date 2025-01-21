@@ -12,7 +12,25 @@ This integration is using the Fiat Uconnect cloud API which was reverse-engineer
   - Initiate charging
   - Enable air conditioning
   - Update location
-  - ...etc
+  - ...a lot more
+
+See the services available from the integration. Be advised that not all commands are available for all cars/brands.
+
+## Supported Brands & Regions
+- Fiat EU
+- Fiat US
+- Fiat Asia
+- Fiat Canada
+- Jeep US
+- Jeep EU
+- Chrysler US
+- Chrysler Canada
+- Alfa Romeo EU
+- Alfa Romeo Asia
+- Alfa Romeo US Canada
+- Maserati EU
+- Maserati Asia
+- Maserati US Canada
 
 Be advised that I only tested it a Fiat 500e in Europe, so please open issues if there are problems with other cars/brands/regions.
 
