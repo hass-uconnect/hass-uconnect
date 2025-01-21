@@ -21,10 +21,10 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from pyfiat.api import API
+from pyfiat.brands import BRANDS as BRANDS_BY_NAME
 
 from .const import (
     BRANDS,
-    BRANDS_API,
     CONF_BRAND_REGION,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_PIN,
@@ -37,8 +37,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Optional(CONF_PIN, default=DEFAULT_PIN): str,
         vol.Required(CONF_BRAND_REGION): vol.In(BRANDS),
+        vol.Optional(CONF_PIN, default=DEFAULT_PIN): str,
     }
 )
 
@@ -47,14 +47,16 @@ async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]):
     """Validate the user input allows us to connect."""
 
     try:
-        api = API(email=user_input[CONF_USERNAME],
-                  password=user_input[CONF_PASSWORD],
-                  pin=user_input[CONF_PIN],
-                  brand=BRANDS_API[BRANDS[user_input[CONF_BRAND_REGION]]]
-                  )
+        api = API(
+            email=user_input[CONF_USERNAME],
+            password=user_input[CONF_PASSWORD],
+            pin=user_input[CONF_PIN],
+            brand=BRANDS_BY_NAME[BRANDS[user_input[CONF_BRAND_REGION]]]
+        )
 
         await hass.async_add_executor_job(api.login)
-    except:
+    except Exception as e:
+        _LOGGER.exception(f"Authentication failed: {e}")
         raise InvalidAuth
 
 

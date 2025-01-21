@@ -1,30 +1,28 @@
 """Constants for the Fiat integration"""
 
-from pyfiat.brands import (
-    FIAT_EU, FIAT_US, RAM_US, DODGE_US, JEEP_EU, JEEP_US
-)
+from pyfiat.brands import *
 
 DOMAIN: str = "fiat"
 
 CONF_BRAND_REGION: str = "brand_region"
 
-BRAND_FIAT_EUROPE: str = "Fiat_Europe"
-BRAND_FIAT_USA: str = "Fiat_USA"
-BRAND_RAM_USA: str = "Ram_USA"
-BRAND_DODGE_USA: str = "Dodge_USA"
-BRAND_JEEP_EUROPE: str = "Jeep_Europe"
-BRAND_JEEP_USA: str = "Jeep_USA"
-
-BRANDS = {1: BRAND_FIAT_EUROPE, 2: BRAND_FIAT_USA, 3: BRAND_RAM_USA,
-          4: BRAND_DODGE_USA, 5: BRAND_JEEP_EUROPE, 6: BRAND_JEEP_USA}
-
-BRANDS_API = {
-    BRAND_FIAT_EUROPE: FIAT_EU,
-    BRAND_FIAT_USA: FIAT_US,
-    BRAND_DODGE_USA: DODGE_US,
-    BRAND_JEEP_EUROPE: JEEP_EU,
-    BRAND_JEEP_USA: JEEP_US,
-    BRAND_RAM_USA: RAM_US,
+BRANDS = {
+    1: FIAT_EU.name,
+    2: FIAT_US.name,
+    3: RAM_US.name,
+    4: DODGE_US.name,
+    5: JEEP_EU.name,
+    6: JEEP_US.name,
+    7: MASERATI_ASIA.name,
+    8: MASERATI_EU.name,
+    9: MASERATI_US_CANADA.name,
+    10: CHRYSLER_CANADA.name,
+    11: CHRYSLER_US.name,
+    12: ALFA_ROMEO_ASIA.name,
+    13: ALFA_ROMEO_EU.name,
+    14: ALFA_ROMEO_US_CANADA.name,
+    15: FIAT_ASIA.name,
+    16: FIAT_CAN.name,
 }
 
 DEFAULT_PIN: str = ""

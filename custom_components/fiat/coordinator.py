@@ -8,6 +8,7 @@ import logging
 
 from pyfiat import Client
 from pyfiat.command import Command
+from pyfiat.brands import BRANDS as BRANDS_BY_NAME
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
@@ -24,7 +25,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     CONF_BRAND_REGION,
     BRANDS,
-    BRANDS_API,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -43,7 +43,8 @@ class FiatDataUpdateCoordinator(DataUpdateCoordinator):
             email=config_entry.data.get(CONF_USERNAME),
             password=config_entry.data.get(CONF_PASSWORD),
             pin=config_entry.data.get(CONF_PIN),
-            brand=BRANDS_API[BRANDS[config_entry.data.get(CONF_BRAND_REGION)]],
+            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(
+                CONF_BRAND_REGION)]],
         )
 
         self.refresh_interval: int = config_entry.options.get(
