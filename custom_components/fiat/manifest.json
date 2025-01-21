@@ -13,7 +13,7 @@
         "fiat"
     ],
     "requirements": [
-        "python_fiat_api>=0.1.4"
+        "python_fiat_api==0.1.5"
     ],
-    "version": "0.1.2"
+    "version": "0.1.3"
 }

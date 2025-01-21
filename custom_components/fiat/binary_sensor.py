@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from typing import Final
 
 from homeassistant.components.binary_sensor import (
@@ -21,8 +20,6 @@ from pyfiat.client import Vehicle
 from .const import DOMAIN
 from .coordinator import FiatDataUpdateCoordinator
 from .entity import FiatEntity
-
-_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass

@@ -1,5 +1,3 @@
-import logging
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     Platform,
@@ -33,8 +31,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     try:
         await coordinator.async_config_entry_first_refresh()
-    except Exception as ex:
-        raise ConfigEntryNotReady(f"Config Not Ready: {ex}")
+    except Exception as e:
+        raise ConfigEntryNotReady(f"Config Not Ready: {e}")
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][config_entry.unique_id] = coordinator
