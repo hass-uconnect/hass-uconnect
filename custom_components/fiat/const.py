@@ -23,6 +23,7 @@ BRANDS = {
     14: ALFA_ROMEO_US_CANADA.name,
     15: FIAT_ASIA.name,
     16: FIAT_CANADA.name,
+    17: JEEP_ASIA.name,
 }
 
 DEFAULT_PIN: str = ""
