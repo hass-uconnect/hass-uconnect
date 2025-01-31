@@ -10,7 +10,7 @@
                     "password": "Password",
                     "brand_region": "Brand + Region",
                     "pin": "Pin",
-                    "disable_tls_verification": "Disable TLS verification"
+                    "disable_tls_verification": "Disable TLS certificate verification"
                 }
             },
             "reauth_confirm": {
