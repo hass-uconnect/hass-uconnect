@@ -24,6 +24,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_BRAND_REGION,
+    CONF_DISABLE_TLS_VERIFICATION,
     BRANDS,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -45,6 +46,8 @@ class FiatDataUpdateCoordinator(DataUpdateCoordinator):
             pin=config_entry.data.get(CONF_PIN),
             brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(
                 CONF_BRAND_REGION)]],
+            disable_tls_verification=config_entry.data.get(
+                CONF_DISABLE_TLS_VERIFICATION),
         )
 
         self.refresh_interval: int = config_entry.options.get(

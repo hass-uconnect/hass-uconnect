@@ -26,6 +26,7 @@ from pyfiat.brands import BRANDS as BRANDS_BY_NAME
 from .const import (
     BRANDS,
     CONF_BRAND_REGION,
+    CONF_DISABLE_TLS_VERIFICATION,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_PIN,
     DOMAIN,
@@ -39,6 +40,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_BRAND_REGION): vol.In(BRANDS),
         vol.Optional(CONF_PIN, default=DEFAULT_PIN): str,
+        vol.Required(CONF_DISABLE_TLS_VERIFICATION): bool,
     }
 )
 
@@ -51,7 +53,8 @@ async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]):
             email=user_input[CONF_USERNAME],
             password=user_input[CONF_PASSWORD],
             pin=user_input[CONF_PIN],
-            brand=BRANDS_BY_NAME[BRANDS[user_input[CONF_BRAND_REGION]]]
+            brand=BRANDS_BY_NAME[BRANDS[user_input[CONF_BRAND_REGION]]],
+            disable_tls_verification=user_input[CONF_DISABLE_TLS_VERIFICATION],
         )
 
         await hass.async_add_executor_job(api.login)

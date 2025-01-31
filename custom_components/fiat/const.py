@@ -5,6 +5,7 @@ from pyfiat.brands import *
 DOMAIN: str = "fiat"
 
 CONF_BRAND_REGION: str = "brand_region"
+CONF_DISABLE_TLS_VERIFICATION: str = "disable_tls_verification"
 
 BRANDS = {
     1: FIAT_EU.name,
