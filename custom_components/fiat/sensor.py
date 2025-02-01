@@ -34,7 +34,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
     SensorEntityDescription(
         key="odometer",
         name="Odometer",
-        icon="mdi:road-variant",
+        icon="mdi:counter",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
@@ -93,31 +93,37 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
     ),
     SensorEntityDescription(
         key="wheel_front_left_pressure",
-        name="Wheel Front Left Pressure",
+        name="Front Left Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="wheel_front_right_pressure",
-        name="Wheel Front Right Pressure",
+        name="Front Right Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="wheel_rear_left_pressure",
-        name="Wheel Rear Left Pressure",
+        name="Rear Left Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="wheel_rear_right_pressure",
-        name="Wheel Rear Right Pressure",
+        name="Rear Right Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
+    ),
+    SensorEntityDescription(
+        key="oil_level",
+        name="Oil Level",
+        icon="mdi:oil",
+        native_unit_of_measurement=PERCENTAGE,
     ),
 )
 
