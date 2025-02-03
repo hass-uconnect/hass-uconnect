@@ -126,11 +126,6 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
         native_unit_of_measurement=PERCENTAGE,
     ),
     SensorEntityDescription(
-        key="fuel_low",
-        name="Low Fuel",
-        icon="mdi:fuel",
-    ),
-    SensorEntityDescription(
         key="fuel_amount",
         name="Fuel Remaining",
         icon="mdi:fuel",
