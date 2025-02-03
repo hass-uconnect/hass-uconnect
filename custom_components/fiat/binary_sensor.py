@@ -106,11 +106,15 @@ SENSOR_DESCRIPTIONS: Final[tuple[FiatBinarySensorEntityDescription, ...]] = (
     FiatBinarySensorEntityDescription(
         key="plugged_in",
         name="EV Charger",
+        on_icon="mdi:power-plug",
+        off_icon="mdi:power-plug-off",
         device_class=BinarySensorDeviceClass.PLUG,
     ),
     FiatBinarySensorEntityDescription(
         key="charging",
         name="Charging",
+        on_icon="mdi:battery-charging",
+        off_icon="mdi:battery-alert",
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
     ),
     FiatBinarySensorEntityDescription(
@@ -139,6 +143,13 @@ SENSOR_DESCRIPTIONS: Final[tuple[FiatBinarySensorEntityDescription, ...]] = (
         name="Tire Pressure Rear Left Warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+    ),
+    FiatBinarySensorEntityDescription(
+        key="fuel_low",
+        name="Low Fuel",
+        on_icon="mdi:gas_station",
+        off_icon="mdi:fuel",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
 )
