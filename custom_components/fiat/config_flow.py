@@ -44,6 +44,16 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Required(
+            CONF_SCAN_INTERVAL,
+            default=DEFAULT_SCAN_INTERVAL,
+        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=999)),
+        vol.Required(CONF_DISABLE_TLS_VERIFICATION): bool,
+    }
+)
+
 
 async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]):
     """Validate the user input allows us to connect."""
@@ -66,25 +76,9 @@ async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]):
 class FiatOptionFlowHandler(config_entries.OptionsFlow):
     """Handle an option flow for Fiat"""
 
-    @property
-    def config_entry(self):
-        return self.hass.config_entries.async_get_entry(self.handler)
-
-    def __init__(self) -> None:
-        """Initialize option flow instance."""
-
-        self.schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_SCAN_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL,
-                    ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=999)),
-            }
-        )
-
-    async def async_step_init(self, user_input=None) -> FlowResult:
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
         """Handle options init setup."""
 
         if user_input is not None:
@@ -92,7 +86,11 @@ class FiatOptionFlowHandler(config_entries.OptionsFlow):
                 title=self.config_entry.title, data=user_input
             )
 
-        return self.async_show_form(step_id="init", data_schema=self.schema)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, self.config_entry.options)
+        )
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

@@ -39,6 +39,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     async_setup_services(hass)
 
+    # Register a listener for options updates
+    config_entry.async_on_unload(
+        config_entry.add_update_listener(coordinator.update_options))
+
     return True
 
 

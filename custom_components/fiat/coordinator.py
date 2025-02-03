@@ -85,3 +85,10 @@ class FiatDataUpdateCoordinator(DataUpdateCoordinator):
         """Execute the given command"""
 
         await self.hass.async_add_executor_job(self.client.api.command, vin, cmd)
+
+    async def update_options(self, hass: HomeAssistant, config_entry: ConfigEntry):
+        self.update_interval = timedelta(seconds=config_entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60)
+
+        self.client.set_tls_verification(
+            not config_entry.options.get(CONF_DISABLE_TLS_VERIFICATION))

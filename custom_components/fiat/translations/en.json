@@ -31,7 +31,8 @@
             "init": {
                 "title": "API Configuration",
                 "data": {
-                    "scan_interval": "Scan Interval (min)"
+                    "scan_interval": "Scan Interval (min)",
+                    "disable_tls_verification": "Disable TLS certificate verification"
                 }
             }
         }
