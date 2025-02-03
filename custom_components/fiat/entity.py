@@ -24,7 +24,6 @@ class FiatEntity(CoordinatorEntity):
         return DeviceInfo(
             identifiers={(DOMAIN, self.vehicle.vin)},
             manufacturer=self.vehicle.make,
-            model=self.vehicle.make,
-            name=f"{self.vehicle.make} {
-                self.vehicle.nickname or self.vehicle.model}",
+            model=self.vehicle.model,
+            name=f"{self.vehicle.make} {self.vehicle.model}" or self.vehicle_nickname,
         )
