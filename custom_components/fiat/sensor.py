@@ -52,26 +52,31 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
     SensorEntityDescription(
         key="charging_level",
         name="Charger Type",
+        icon="mdi:ev-station",
     ),
     SensorEntityDescription(
         key="charging_level_preference",
         name="Charging Level Pref",
+        icon="mdi:cog-stop",
     ),
     SensorEntityDescription(
         key="battery_voltage",
         name="12V Battery",
+        icon="mdi:car-battery",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
     ),
     SensorEntityDescription(
         key="time_to_fully_charge_l2",
         name="Time to Charge L2",
+        icon="mdi:battery-clock",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
     ),
     SensorEntityDescription(
         key="time_to_fully_charge_l3",
         name="Time to Charge L3",
+        icon="mdi:battery-clock",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
     ),
