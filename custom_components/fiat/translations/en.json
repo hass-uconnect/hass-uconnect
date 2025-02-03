@@ -1,10 +1,10 @@
 {
-    "title": "Fiat Uconnect",
+    "title": "Uconnect",
     "config": {
         "step": {
             "user": {
                 "title": "API Authentication",
-                "description": "Set up your Stellantis/FCA vehicle to integrate with Home Assistant.",
+                "description": "Set up your Uconnect-enabled vehicle to integrate with Home Assistant.",
                 "data": {
                     "username": "Username",
                     "password": "Password",
