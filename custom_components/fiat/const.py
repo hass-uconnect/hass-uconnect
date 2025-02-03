@@ -1,8 +1,8 @@
-"""Constants for the Fiat integration"""
+"""Constants for the Uconnect integration"""
 
-from pyfiat.brands import *
+from py_uconnect.brands import *
 
-DOMAIN: str = "fiat"
+DOMAIN: str = "uconnect"
 
 CONF_BRAND_REGION: str = "brand_region"
 CONF_DISABLE_TLS_VERIFICATION: str = "disable_tls_verification"

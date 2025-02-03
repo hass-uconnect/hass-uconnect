@@ -1,4 +1,4 @@
-"""Coordinator for Fiat integration"""
+"""Coordinator for Uconnect integration"""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from datetime import timedelta
 import traceback
 import logging
 
-from pyfiat import Client
-from pyfiat.command import Command
-from pyfiat.brands import BRANDS as BRANDS_BY_NAME
+from py_uconnect import Client
+from py_uconnect.command import Command
+from py_uconnect.brands import BRANDS as BRANDS_BY_NAME
 
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
@@ -33,7 +33,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class FiatDataUpdateCoordinator(DataUpdateCoordinator):
+class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:

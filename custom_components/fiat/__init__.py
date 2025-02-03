@@ -7,7 +7,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
-from .coordinator import FiatDataUpdateCoordinator
+from .coordinator import UconnectDataUpdateCoordinator
 from .services import async_setup_services, async_unload_services
 
 PLATFORMS: list[str] = [
@@ -25,9 +25,9 @@ async def async_setup(hass: HomeAssistant, config_entry: ConfigEntry):
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Set up Fiat from a config entry."""
+    """Set up Uconnect from a config entry."""
 
-    coordinator = FiatDataUpdateCoordinator(hass, config_entry)
+    coordinator = UconnectDataUpdateCoordinator(hass, config_entry)
 
     try:
         await coordinator.async_config_entry_first_refresh()

@@ -1,4 +1,4 @@
-"""Config flow for Fiat integration."""
+"""Config flow for Uconnect integration."""
 
 from __future__ import annotations
 
@@ -20,8 +20,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from pyfiat.api import API
-from pyfiat.brands import BRANDS as BRANDS_BY_NAME
+from py_uconnect.api import API
+from py_uconnect.brands import BRANDS as BRANDS_BY_NAME
 
 from .const import (
     BRANDS,
@@ -73,8 +73,8 @@ async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]):
         raise InvalidAuth
 
 
-class FiatOptionFlowHandler(config_entries.OptionsFlow):
-    """Handle an option flow for Fiat"""
+class UconnectOptionFlowHandler(config_entries.OptionsFlow):
+    """Handle an option flow for Uconnect"""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -94,7 +94,7 @@ class FiatOptionFlowHandler(config_entries.OptionsFlow):
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Fiat"""
+    """Handle a config flow for Uconnect"""
 
     VERSION = 1
     reauth_entry: ConfigEntry | None = None
@@ -103,7 +103,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry):
         """Initiate options flow instance."""
-        return FiatOptionFlowHandler()
+        return UconnectOptionFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

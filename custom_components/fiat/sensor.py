@@ -1,11 +1,11 @@
-"""Sensor for Fiat integration."""
+"""Sensor for Uconnect integration."""
 
 from __future__ import annotations
 
 import logging
 from typing import Final
 
-from pyfiat.client import Vehicle
+from py_uconnect.client import Vehicle
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -15,9 +15,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricPotential,
-    UnitOfLength,
     UnitOfTime,
-    UnitOfPressure,
 )
 
 from homeassistant.config_entries import ConfigEntry
@@ -25,8 +23,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, UNIT_DYNAMIC
-from .entity import FiatEntity
-from .coordinator import FiatDataUpdateCoordinator
+from .entity import UconnectEntity
+from .coordinator import UconnectDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -141,22 +139,22 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensor platform."""
 
-    coordinator: FiatDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
+    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
     entities = []
 
     for vehicle in coordinator.client.get_vehicles().values():
         for description in SENSOR_DESCRIPTIONS:
             if getattr(vehicle, description.key, None) is not None:
                 entities.append(
-                    FiatSensor(coordinator, description, vehicle)
+                    UconnectSensor(coordinator, description, vehicle)
                 )
 
     async_add_entities(entities)
     return True
 
 
-class FiatSensor(SensorEntity, FiatEntity):
-    """Fiat sensor class."""
+class UconnectSensor(SensorEntity, UconnectEntity):
+    """Uconnect sensor class."""
 
     def __init__(
         self, coordinator, description: SensorEntityDescription, vehicle: Vehicle

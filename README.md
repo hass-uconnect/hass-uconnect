@@ -1,6 +1,6 @@
 # Home Assistant Fiat/Chrysler/Dodge/Jeep/Ram integration
 
-This integration is using the Fiat Uconnect cloud API which was reverse-engineered from the native app traffic capture & its decompilation.
+This integration is using the Stellantis Uconnect cloud API which was reverse-engineered from the native app traffic capture & its decompilation.
 
 ## Requirements
 * A supported car made by one of Stellantis brands

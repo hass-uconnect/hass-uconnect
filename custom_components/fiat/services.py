@@ -1,17 +1,16 @@
 import logging
 
 from typing import cast
-from datetime import datetime
 
 from homeassistant.const import ATTR_DEVICE_ID
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import ServiceCall, callback, HomeAssistant
 from homeassistant.helpers import device_registry
 
-from pyfiat.command import *
+from py_uconnect.command import *
 
 from .const import DOMAIN
-from .coordinator import FiatDataUpdateCoordinator
+from .coordinator import UconnectDataUpdateCoordinator
 
 SERVICE_UPDATE = "update"
 
@@ -86,7 +85,7 @@ _LOGGER = logging.getLogger(__name__)
 
 @callback
 def async_setup_services(hass: HomeAssistant) -> bool:
-    """Set up services for Fiat"""
+    """Set up services for Uconnect"""
 
     async def async_call_service(call: ServiceCall):
         coordinator = _get_coordinator_from_device(hass, call)
@@ -114,7 +113,7 @@ def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
     coordinators = list(hass.data[DOMAIN].keys())
 
     if len(coordinators) == 1:
-        coordinator: FiatDataUpdateCoordinator = hass.data[DOMAIN][coordinators[0]]
+        coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][coordinators[0]]
         vehicles = coordinator.client.get_vehicles()
         if len(vehicles) == 1:
             return list(vehicles.keys())[0]
@@ -131,7 +130,7 @@ def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
 
 def _get_coordinator_from_device(
     hass: HomeAssistant, call: ServiceCall
-) -> FiatDataUpdateCoordinator:
+) -> UconnectDataUpdateCoordinator:
     coordinators = list(hass.data[DOMAIN].keys())
 
     if len(coordinators) == 1:

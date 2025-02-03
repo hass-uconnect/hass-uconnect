@@ -1,4 +1,4 @@
-"""Lock for Fiat integration."""
+"""Lock for Uconnect integration."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from pyfiat.client import Vehicle
-from pyfiat.command import COMMAND_DOORS_LOCK, COMMAND_DOORS_UNLOCK
+from py_uconnect.client import Vehicle
+from py_uconnect.command import COMMAND_DOORS_LOCK, COMMAND_DOORS_UNLOCK
 
 from .const import DOMAIN
-from .coordinator import FiatDataUpdateCoordinator
-from .entity import FiatEntity
+from .coordinator import UconnectDataUpdateCoordinator
+from .entity import UconnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,19 +28,19 @@ async def async_setup_entry(
 
     entities = []
     for vehicle in coordinator.client.vehicles.values():
-        entities.append(FiatLock(coordinator, vehicle))
+        entities.append(UconnectLock(coordinator, vehicle))
 
     async_add_entities(entities)
     return True
 
 
-class FiatLock(LockEntity, FiatEntity):
+class UconnectLock(LockEntity, UconnectEntity):
     def __init__(
         self,
-        coordinator: FiatDataUpdateCoordinator,
+        coordinator: UconnectDataUpdateCoordinator,
         vehicle: Vehicle,
     ):
-        FiatEntity.__init__(self, coordinator, vehicle)
+        UconnectEntity.__init__(self, coordinator, vehicle)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_door_lock"
         self._attr_name = f"{vehicle.make} {

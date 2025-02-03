@@ -1,10 +1,10 @@
-"""Device Tracker for Fiat integration."""
+"""Device Tracker for Uconnect integration."""
 
 from __future__ import annotations
 
 import logging
 
-from pyfiat.client import Vehicle
+from py_uconnect.client import Vehicle
 
 from homeassistant.components.device_tracker import SourceType
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
@@ -13,8 +13,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import FiatDataUpdateCoordinator
-from .entity import FiatEntity
+from .coordinator import UconnectDataUpdateCoordinator
+from .entity import UconnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,23 +24,23 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: FiatDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
+    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
     entities = []
     for vehicle in coordinator.client.vehicles.values():
         if vehicle.location is not None:
-            entities.append(FiatTracker(coordinator, vehicle))
+            entities.append(UconnectTracker(coordinator, vehicle))
 
     async_add_entities(entities)
     return True
 
 
-class FiatTracker(TrackerEntity, FiatEntity):
+class UconnectTracker(TrackerEntity, UconnectEntity):
     def __init__(
         self,
-        coordinator: FiatDataUpdateCoordinator,
+        coordinator: UconnectDataUpdateCoordinator,
         vehicle: Vehicle,
     ):
-        FiatEntity.__init__(self, coordinator, vehicle)
+        UconnectEntity.__init__(self, coordinator, vehicle)
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_location"
         self._attr_name = f"{vehicle.make} {
             vehicle.nickname or vehicle.model} Location"

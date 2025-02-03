@@ -15,7 +15,7 @@
             },
             "reauth_confirm": {
                 "title": "API Reauthentication",
-                "description": "Your account is unable to authenticate. Click Submit to re-setup."
+                "description": "Your account is unable to authenticate. Click Submit to reauthenticate."
             }
         },
         "abort": {

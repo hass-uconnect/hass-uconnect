@@ -1,16 +1,16 @@
 
-"""Base Entity for Fiat integration."""
+"""Base Entity for Uconnect integration."""
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
 
-from pyfiat.client import Vehicle
+from py_uconnect.client import Vehicle
 
 from .const import DOMAIN
 
 
-class FiatEntity(CoordinatorEntity):
-    """Class for base entity for Fiat integration."""
+class UconnectEntity(CoordinatorEntity):
+    """Class for base entity for Uconnect integration."""
 
     def __init__(self, coordinator, vehicle):
         """Initialize the base entity."""
@@ -25,5 +25,6 @@ class FiatEntity(CoordinatorEntity):
             identifiers={(DOMAIN, self.vehicle.vin)},
             manufacturer=self.vehicle.make,
             model=self.vehicle.model,
-            name=f"{self.vehicle.make} {self.vehicle.model}" or self.vehicle_nickname,
+            name=f"{self.vehicle.make} {
+                self.vehicle.model}" or self.vehicle_nickname,
         )

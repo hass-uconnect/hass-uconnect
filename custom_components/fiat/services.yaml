@@ -4,7 +4,7 @@ update:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 engine_on:
   fields:
@@ -12,14 +12,14 @@ engine_on:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 engine_off:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 comfort_on:
   fields:
@@ -27,14 +27,14 @@ comfort_on:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 comfort_off:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 hvac_on:
   fields:
@@ -42,14 +42,14 @@ hvac_on:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 hvac_off:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 precond_on:
   fields:
@@ -57,14 +57,14 @@ precond_on:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 precond_off:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 lights:
   fields:
@@ -72,7 +72,7 @@ lights:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 lights_horn:
   fields:
@@ -80,7 +80,7 @@ lights_horn:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 doors_lock:
   fields:
@@ -88,14 +88,14 @@ doors_lock:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 doors_unlock:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 trunk_lock:
   fields:
@@ -103,14 +103,14 @@ trunk_lock:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 trunk_unlock:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 liftgate_lock:
   fields:
@@ -118,14 +118,14 @@ liftgate_lock:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 liftgate_unlock:
   fields:
     device_id:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 charge_now:
   fields:
@@ -133,7 +133,7 @@ charge_now:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 deep_refresh:
   fields:
@@ -141,7 +141,7 @@ deep_refresh:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
 
 refresh_location:
   fields:
@@ -149,4 +149,4 @@ refresh_location:
       required: false
       selector:
         device:
-          integration: fiat
+          integration: uconnect
