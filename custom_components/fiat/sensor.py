@@ -40,14 +40,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
     ),
     SensorEntityDescription(
         key="distance_to_empty_gas",
-        name="Driving Range Left (Gas)",
+        name="Fuel Range",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     SensorEntityDescription(
         key="distance_to_empty_ev",
-        name="Driving Range Left (EV)",
+        name="Battery Range Left",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UNIT_DYNAMIC,
@@ -130,6 +130,17 @@ SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
         key="oil_level",
         name="Oil Level",
         icon="mdi:oil",
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    SensorEntityDescription(
+        key="fuel_low_gas",
+        name="Low Fuel (Gas)",
+        icon="mdi:fuel",
+    ),
+    SensorEntityDescription(
+        key="fuel_amount_gas",
+        name="Fuel Remaining (Gas)",
+        icon="mdi:fuel",
         native_unit_of_measurement=PERCENTAGE,
     ),
 )
