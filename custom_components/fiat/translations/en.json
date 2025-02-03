@@ -3,8 +3,8 @@
     "config": {
         "step": {
             "user": {
-                "title": "Fiat Uconnect - Authentication",
-                "description": "Set up your Fiat Uconnect to integrate with Home Assistant.",
+                "title": "API Authentication",
+                "description": "Set up your Stellantis/FCA vehicle to integrate with Home Assistant.",
                 "data": {
                     "username": "Username",
                     "password": "Password",
@@ -14,7 +14,7 @@
                 }
             },
             "reauth_confirm": {
-                "title": "Fiat Uconnect - Reauthentication",
+                "title": "API Reauthentication",
                 "description": "Your account is unable to authenticate. Click Submit to re-setup."
             }
         },
@@ -22,14 +22,14 @@
             "already_configured": "Device is already configured"
         },
         "error": {
-            "invalid_auth": "Login failed into Fiat Uconnect Servers. Please use official app to logout and log back in and try again!",
+            "invalid_auth": "The login failed to the Uconnect servers. Double check your vehicle doesn't use SiriusXM Guardian and your credentials are correct.",
             "unknown": "Unexpected error"
         }
     },
     "options": {
         "step": {
             "init": {
-                "title": "Fiat Uconnect - Configuration",
+                "title": "API Configuration",
                 "data": {
                     "scan_interval": "Scan Interval (min)"
                 }
