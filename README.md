@@ -1,48 +1,80 @@
-# Home Assistant Fiat/Chrysler/Dodge/Jeep/Ram integration
+![logo](logo.png)
 
-This integration is using the Stellantis Uconnect cloud API which was reverse-engineered from the native app traffic capture & its decompilation.
+Connect your Uconnect-enabled vehicle to Home Assistant. This integration has been made from the reverse-engineered Stellantis vehicle-branded apps and websites.
 
-## Requirements
-* A supported car made by one of Stellantis brands
-* Uconnect (or whatever it is called for other brands) subscription activated
+## Car Brands
 
-## Features
-* Get current car state periodically
-* Send commands to the car:
-  - Initiate charging
-  - Enable air conditioning
-  - Update location
-  - ...a lot more
+US, Canada, EU & Asia regions are supported. Try a different region if the originally selected region does not authenticate.
 
-See the services available from the integration. Be advised that not all commands are available for all cars/brands.
+- Jeep: Works ✅ 
+- Fiat: Works ✅ 
+- Ram: Unknown ❔
+- Dodge: Unknown ❔
+- AlfaRomeo: Unknown ❔
+- Chrysler: Unknown ❔
+- Maserati: Unknown ❔
 
-## Supported Brands & Regions
-- Fiat EU
-- Fiat US
-- Fiat Asia
-- Fiat Canada
-- Jeep US
-- Jeep EU
-- Chrysler US
-- Chrysler Canada
-- Alfa Romeo EU
-- Alfa Romeo Asia
-- Alfa Romeo US Canada
-- Maserati EU
-- Maserati Asia
-- Maserati US Canada
+## Tested Vehicles
 
-Be advised that I only tested it a Fiat 500e in Europe, so please open issues if there are problems with other cars/brands/regions.
+- See tested and working vehicles at the following discussion post: https://github.com/hass-uconnect/hass-uconnect/discussions/5
+- If your vehicle works, Feel free to upload the year, make and model to the discussion post.
 
-## Setting up
-* Install the integration through HACS
-* Add it and input your email/password and optionally PIN.
-  PIN is needed if you want to execute remote commands.
-* Select your brand + region combo
+## Prerequisites 📃
 
-## Caveats
-* The API sometimes is slow or non-working. The states are also not updated frequently sometimes. For example to update the battey SOC during charge you can set up an automation that would call `deep_refresh` service periodically if the car is plugged in.
-* Commands outcome is not yet checked since I don't see an available API for it besides the notifications, will try to implement that later.
+- HACS (Home Assistant Community Store)
+- A vehicle using Uconnect cellular services. **Vehicles that use SiriusXM Guardian are not supported.** Check at the links below.  
+  - Fiat: https://connect.fiat.com/
+  - Jeep: https://connect.jeep.com/
+  - Ram: https://connect.ramtrucks.com/
+  - Dodge: https://connect.dodge.com/
+  - AlfaRomeo: https://connect.alfaromeo.com/
+  - Chrysler: https://connect.chrysler.com/choose-country
+  - Maserati: https://connect.maserati.com/
 
+## Features ✔️
+
+- Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲ etc. into Home Assistant.
+- Multiple Brands: Fiat, Jeep, Ram, Dodge, AlfaRomeo, Chrysler & Maserati
+- Multiple Regions: America, Canada, Europe & Asia
+- Supports multiple cars/brands on the same account. 🚙🚗🚕
+- Location tracking.🌍
+- Live vehicle status such as windows/door locks, and ignition status for supported vehicles.
+- Home Assistant zones (home 🏠, work 🏦 etc.) support.
+- Uses the same data source as the official app 📱.
+- Remote commands (unlock doors 🚪, switch air conditioner 🧊 on , ...) **Use a service (or action) to trigger commands.** Some commands may not work with all vehicles. 
+- Available commands are:
+  - `Refresh Location`: Updates the vehicle location
+  - `Deep Refresh`: Refreshes EV battery level
+  - `Lights/Horn`: Trigger vehicle horn and lights
+  - `Lights`: Trigger vehicle lights
+  - `Preconditioning On/Off`: Toggle vehicle preconditioning
+  - `Trunk Lock/Unlock` / `Liftgate Lock/Unlock`: Lock/Unlock trunk/liftgate
+  - `Doors Lock/Unlock`: Lock/Unlock vehicle doors
+  - `Engine On/Off`: Remotely starts/stops the vehicle engine
+  - `Charge Now`: Initiates EV charging
+  - `HVAC On/Off`: Toggles the HVAC
+  - `Comfort On/Off`: Another alternative to the above HVAC commands
+  - `Update`: Asks the integration to update the data from the API immediately
+
+## What will NEVER work? ❌
+
+- Things the Uconnect API does not support such as real time tracking or adjusting the audio volume.
+- Some commands are vehicle specific and do not work across all makes and models.
+- Some vehicles do not support live status for locks/windows/ignition. 
+
+## How to install 🛠️
+
+- Make sure you have [HACS](https://hacs.xyz/docs/use/#getting-started-with-hacs) already installed.
+- Add the [repository URL](https://github.com/hass-uconnect/hass-uconnect) to your HACS custom repositories as type integration.
+- Install the integration and restart Home Assistant.
+- Go to your integrations configuration page once started and add the Uconnect integration.
+  
 ## Example
-![Dashboard](dashboard.png)
+
+![example](dashboard.png)
+
+## Useful Resources
+
+Cards: 
+  - [Ultra Vehicle Card](https://github.com/WJDDesigns/Ultra-Vehicle-Card)
+  - [Vehicle Status Card](https://github.com/ngocjohn/vehicle-status-card)
