@@ -162,16 +162,15 @@ async def async_setup_entry(
 ) -> None:
     """Set up binary_sensor platform."""
 
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
+    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
+        config_entry.unique_id
+    ]
     entities: list[UconnectBinarySensor] = []
 
     for vehicle in coordinator.client.vehicles.values():
         for description in SENSOR_DESCRIPTIONS:
             if getattr(vehicle, description.key) is not None:
-                entities.append(
-                    UconnectBinarySensor(
-                        coordinator, description, vehicle)
-                )
+                entities.append(UconnectBinarySensor(coordinator, description, vehicle))
 
     async_add_entities(entities)
     return True

@@ -1,5 +1,3 @@
-import logging
-
 from typing import cast
 
 from homeassistant.const import ATTR_DEVICE_ID
@@ -80,9 +78,6 @@ SERVICES_COMMANDS = {
 }
 
 
-_LOGGER = logging.getLogger(__name__)
-
-
 @callback
 def async_setup_services(hass: HomeAssistant) -> bool:
     """Set up services for Uconnect"""
@@ -94,8 +89,8 @@ def async_setup_services(hass: HomeAssistant) -> bool:
         if call.service != SERVICE_UPDATE:
             cmd = SERVICES_COMMANDS[call.service]
             await coordinator.async_command(vin, cmd)
-
-        await coordinator.async_update_all()
+        else:
+            await coordinator.async_refresh()
 
     for service in SUPPORTED_SERVICES:
         hass.services.async_register(DOMAIN, service, async_call_service)
@@ -118,8 +113,7 @@ def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
         if len(vehicles) == 1:
             return list(vehicles.keys())[0]
 
-    device_entry = device_registry.async_get(
-        hass).async_get(call.data[ATTR_DEVICE_ID])
+    device_entry = device_registry.async_get(hass).async_get(call.data[ATTR_DEVICE_ID])
 
     for entry in device_entry.identifiers:
         if entry[0] == DOMAIN:
@@ -136,9 +130,7 @@ def _get_coordinator_from_device(
     if len(coordinators) == 1:
         return hass.data[DOMAIN][coordinators[0]]
 
-    device_entry = device_registry.async_get(hass).async_get(
-        call.data[ATTR_DEVICE_ID]
-    )
+    device_entry = device_registry.async_get(hass).async_get(call.data[ATTR_DEVICE_ID])
     config_entry_ids = device_entry.config_entries
     config_entry_id = next(
         (
@@ -151,7 +143,6 @@ def _get_coordinator_from_device(
             == DOMAIN
         ),
         None,
-
     )
     config_entry_unique_id = hass.config_entries.async_get_entry(
         config_entry_id

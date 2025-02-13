@@ -10,8 +10,6 @@ from py_uconnect import Client
 from py_uconnect.command import Command
 from py_uconnect.brands import BRANDS as BRANDS_BY_NAME
 
-from homeassistant.exceptions import ConfigEntryAuthFailed
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_PASSWORD,
@@ -25,12 +23,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     CONF_BRAND_REGION,
     CONF_DISABLE_TLS_VERIFICATION,
+    CONF_DEBUG,
     BRANDS,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(DOMAIN)
 
 
 class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
@@ -44,22 +43,23 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             email=config_entry.data.get(CONF_USERNAME),
             password=config_entry.data.get(CONF_PASSWORD),
             pin=config_entry.data.get(CONF_PIN),
-            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(
-                CONF_BRAND_REGION)]],
+            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(CONF_BRAND_REGION)]],
             disable_tls_verification=config_entry.data.get(
-                CONF_DISABLE_TLS_VERIFICATION),
+                CONF_DISABLE_TLS_VERIFICATION
+            ),
         )
 
-        self.refresh_interval: int = config_entry.options.get(
-            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
+        self.client.set_debug(config_entry.data.get(CONF_DEBUG))
+
+        self.refresh_interval: int = (
+            config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
+        )
 
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(
-                seconds=self.refresh_interval
-            ),
+            update_interval=timedelta(seconds=self.refresh_interval),
             always_update=True,
         )
 
@@ -76,19 +76,20 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
 
         return self.data
 
-    async def async_update_all(self) -> None:
-        """Update vehicle data."""
-
-        await self.hass.async_add_executor_job(self.client.refresh)
-
     async def async_command(self, vin: str, cmd: Command) -> None:
         """Execute the given command"""
 
-        await self.hass.async_add_executor_job(self.client.api.command, vin, cmd)
+        await self.hass.async_add_executor_job(self.client.command_verify, vin, cmd)
+        await self.async_refresh()
 
     async def update_options(self, hass: HomeAssistant, config_entry: ConfigEntry):
-        self.update_interval = timedelta(seconds=config_entry.options.get(
-            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60)
+        self.update_interval = timedelta(
+            seconds=config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            * 60
+        )
 
         self.client.set_tls_verification(
-            not config_entry.options.get(CONF_DISABLE_TLS_VERIFICATION))
+            not config_entry.options.get(CONF_DISABLE_TLS_VERIFICATION)
+        )
+
+        self.client.set_debug(config_entry.options.get(CONF_DEBUG))

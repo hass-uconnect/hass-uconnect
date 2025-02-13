@@ -27,6 +27,8 @@ from .const import (
     BRANDS,
     CONF_BRAND_REGION,
     CONF_DISABLE_TLS_VERIFICATION,
+    CONF_DEBUG,
+    CONF_ADD_COMMAND_ENTITIES,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_PIN,
     DOMAIN,
@@ -40,7 +42,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_BRAND_REGION): vol.In(BRANDS),
         vol.Optional(CONF_PIN, default=DEFAULT_PIN): str,
-        vol.Required(CONF_DISABLE_TLS_VERIFICATION): bool,
+        vol.Required(CONF_DISABLE_TLS_VERIFICATION, default=False): bool,
+        vol.Required(CONF_ADD_COMMAND_ENTITIES, default=False): bool,
     }
 )
 
@@ -51,6 +54,8 @@ OPTIONS_SCHEMA = vol.Schema(
             default=DEFAULT_SCAN_INTERVAL,
         ): vol.All(vol.Coerce(int), vol.Range(min=1, max=999)),
         vol.Required(CONF_DISABLE_TLS_VERIFICATION): bool,
+        vol.Required(CONF_DEBUG, default=False): bool,
+        vol.Required(CONF_ADD_COMMAND_ENTITIES, default=False): bool,
     }
 )
 
@@ -89,7 +94,8 @@ class UconnectOptionFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                OPTIONS_SCHEMA, self.config_entry.options)
+                OPTIONS_SCHEMA, self.config_entry.options
+            ),
         )
 
 
@@ -121,7 +127,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await validate_input(self.hass, user_input)
         except InvalidAuth:
             errors["base"] = "invalid_auth"
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:

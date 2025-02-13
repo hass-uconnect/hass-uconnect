@@ -10,10 +10,12 @@
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/hass-uconnect/hass-uconnect/issues",
     "loggers": [
-        "uconnect"
+        "uconnect",
+        "py_uconnect",
+        "custom_components.uconnect"
     ],
     "requirements": [
-        "py-uconnect==0.1.12"
+        "py-uconnect==0.2.4"
     ],
-    "version": "0.2.1"
+    "version": "0.3.0"
 }

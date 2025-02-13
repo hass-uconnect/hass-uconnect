@@ -1,9 +1,9 @@
 """Sensor for Uconnect integration."""
 
 from __future__ import annotations
+from typing import Final, Callable, Any
 
-import logging
-from typing import Final
+from dataclasses import dataclass
 
 from py_uconnect.client import Vehicle
 
@@ -26,113 +26,132 @@ from .const import DOMAIN, UNIT_DYNAMIC
 from .entity import UconnectEntity
 from .coordinator import UconnectDataUpdateCoordinator
 
-_LOGGER = logging.getLogger(__name__)
 
-SENSOR_DESCRIPTIONS: Final[tuple[SensorEntityDescription, ...]] = (
-    SensorEntityDescription(
+@dataclass
+class UconnectSensorEntityDescription(SensorEntityDescription):
+    """A class that describes custom sensor entities."""
+
+    get: Callable[[Vehicle], Any] | None = None
+
+
+SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
+    UconnectSensorEntityDescription(
         key="odometer",
         name="Odometer",
         icon="mdi:counter",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="distance_to_empty",
         name="Driving Range",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="state_of_charge",
         name="HVBattery Charge",
         native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="charging_level",
         name="Charger Type",
         icon="mdi:ev-station",
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="charging_level_preference",
         name="Charging Level Pref",
         icon="mdi:cog-stop",
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="battery_voltage",
         name="12V Battery",
         icon="mdi:car-battery",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="time_to_fully_charge_l2",
         name="Time to Charge L2",
         icon="mdi:battery-clock",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="time_to_fully_charge_l3",
         name="Time to Charge L3",
         icon="mdi:battery-clock",
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="distance_to_service",
         name="Distance to Service",
         icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="days_to_service",
         name="Days till service needed",
         icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.DAYS,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="wheel_front_left_pressure",
         name="Front Left Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="wheel_front_right_pressure",
         name="Front Right Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="wheel_rear_left_pressure",
         name="Rear Left Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="wheel_rear_right_pressure",
         name="Rear Right Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="oil_level",
         name="Oil Level",
         icon="mdi:oil",
         native_unit_of_measurement=PERCENTAGE,
     ),
-    SensorEntityDescription(
+    UconnectSensorEntityDescription(
         key="fuel_amount",
         name="Fuel Remaining",
         icon="mdi:fuel",
         native_unit_of_measurement=PERCENTAGE,
+    ),
+    UconnectSensorEntityDescription(
+        key="last_full_update",
+        name="Last Full Update At",
+        icon="mdi:update",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    UconnectSensorEntityDescription(
+        key="last_location_update",
+        name="Last Location Update At",
+        icon="mdi:update",
+        get=lambda x: x.location.updated,
+        device_class=SensorDeviceClass.TIMESTAMP,
     ),
 )
 
@@ -144,15 +163,18 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensor platform."""
 
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
+    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
+        config_entry.unique_id
+    ]
     entities = []
 
     for vehicle in coordinator.client.get_vehicles().values():
         for description in SENSOR_DESCRIPTIONS:
-            if getattr(vehicle, description.key, None) is not None:
-                entities.append(
-                    UconnectSensor(coordinator, description, vehicle)
-                )
+            if (
+                getattr(vehicle, description.key, None) is not None
+                or description.get is not None
+            ):
+                entities.append(UconnectSensor(coordinator, description, vehicle))
 
     async_add_entities(entities)
     return True
@@ -162,13 +184,16 @@ class UconnectSensor(SensorEntity, UconnectEntity):
     """Uconnect sensor class."""
 
     def __init__(
-        self, coordinator, description: SensorEntityDescription, vehicle: Vehicle
+        self,
+        coordinator,
+        description: UconnectSensorEntityDescription,
+        vehicle: Vehicle,
     ):
         """Initialize the sensor."""
 
         super().__init__(coordinator, vehicle)
 
-        self._description = description
+        self._description: UconnectSensorEntityDescription = description
         self._key = self._description.key
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{self._key}"
         self._attr_icon = self._description.icon
@@ -179,7 +204,11 @@ class UconnectSensor(SensorEntity, UconnectEntity):
 
     @property
     def native_value(self):
-        """Return the value reported by the sensor."""
+        """Return the value reported by the sensor"""
+
+        if self._description.get is not None:
+            return self._description.get(self.vehicle)
+
         return getattr(self.vehicle, self._key)
 
     @property

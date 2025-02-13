@@ -1,4 +1,3 @@
-
 """Base Entity for Uconnect integration."""
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -7,12 +6,13 @@ from homeassistant.helpers.entity import DeviceInfo
 from py_uconnect.client import Vehicle
 
 from .const import DOMAIN
+from .coordinator import UconnectDataUpdateCoordinator
 
 
 class UconnectEntity(CoordinatorEntity):
     """Class for base entity for Uconnect integration."""
 
-    def __init__(self, coordinator, vehicle):
+    def __init__(self, coordinator: UconnectDataUpdateCoordinator, vehicle: Vehicle):
         """Initialize the base entity."""
         super().__init__(coordinator)
         self.vehicle: Vehicle = vehicle
@@ -26,5 +26,6 @@ class UconnectEntity(CoordinatorEntity):
             manufacturer=self.vehicle.make,
             model=self.vehicle.model,
             name=f"{self.vehicle.make} {
-                self.vehicle.model}" or self.vehicle_nickname,
+                self.vehicle.model}"
+            or self.vehicle_nickname,
         )

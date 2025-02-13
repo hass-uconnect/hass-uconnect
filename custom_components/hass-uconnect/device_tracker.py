@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import logging
-
 from py_uconnect.client import Vehicle
 
 from homeassistant.components.device_tracker import SourceType
@@ -16,15 +14,15 @@ from .const import DOMAIN
 from .coordinator import UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
 
-_LOGGER = logging.getLogger(__name__)
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][config_entry.unique_id]
+    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
+        config_entry.unique_id
+    ]
     entities = []
     for vehicle in coordinator.client.vehicles.values():
         if vehicle.location is not None:

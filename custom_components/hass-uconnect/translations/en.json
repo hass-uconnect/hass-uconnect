@@ -10,6 +10,7 @@
                     "password": "Password",
                     "brand_region": "Brand + Region",
                     "pin": "Pin",
+                    "add_command_entities": "Adds entities to execute commands",
                     "disable_tls_verification": "Disable TLS certificate verification"
                 }
             },
@@ -32,7 +33,9 @@
                 "title": "API Configuration",
                 "data": {
                     "scan_interval": "Scan Interval (min)",
-                    "disable_tls_verification": "Disable TLS certificate verification"
+                    "add_command_entities": "Adds entities to execute commands",
+                    "disable_tls_verification": "Disable TLS certificate verification",
+                    "debug": "Enable API debugging"
                 }
             }
         }
