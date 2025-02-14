@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - '**'
     tags:
       - "v*"
 
@@ -19,6 +21,9 @@ jobs:
       uses: jossef/action-semantic-release-info@v2
       env:
         GITHUB_TOKEN: ${{ github.token }}
+      with:
+        branches:
+          - main
 
     - uses: ncipollo/release-action@v1
       with:
