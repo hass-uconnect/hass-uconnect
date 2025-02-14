@@ -23,7 +23,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     CONF_BRAND_REGION,
     CONF_DISABLE_TLS_VERIFICATION,
-    CONF_DEBUG,
     BRANDS,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -48,8 +47,6 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
                 CONF_DISABLE_TLS_VERIFICATION
             ),
         )
-
-        self.client.set_debug(config_entry.data.get(CONF_DEBUG))
 
         self.refresh_interval: int = (
             config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
@@ -87,9 +84,3 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             seconds=config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             * 60
         )
-
-        self.client.set_tls_verification(
-            not config_entry.options.get(CONF_DISABLE_TLS_VERIFICATION)
-        )
-
-        self.client.set_debug(config_entry.options.get(CONF_DEBUG))

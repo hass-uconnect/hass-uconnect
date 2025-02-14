@@ -14,9 +14,6 @@ PLATFORMS: list[str] = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.DEVICE_TRACKER,
-]
-
-PLATFORMS_ACTIONS: list[str] = [
     Platform.LOCK,
     Platform.SWITCH,
     Platform.BUTTON,
@@ -39,15 +36,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     except Exception as e:
         raise ConfigEntryNotReady(f"Config Not Ready: {e}")
 
-    PLATFORMS_USED = PLATFORMS.copy()
-
-    # Do not add entities if not configured
-    if config_entry.data.get(CONF_ADD_COMMAND_ENTITIES):
-        PLATFORMS_USED += PLATFORMS_ACTIONS
-
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][config_entry.unique_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS_USED)
+    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
     async_setup_services(hass)
 
     # Register a listener for options updates
@@ -61,14 +52,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    PLATFORMS_USED = PLATFORMS.copy()
-
-    # Do not add entities if not configured
-    if config_entry.data.get(CONF_ADD_COMMAND_ENTITIES):
-        PLATFORMS_USED += PLATFORMS_ACTIONS
-
     if unload_ok := await hass.config_entries.async_unload_platforms(
-        config_entry, PLATFORMS_USED
+        config_entry, PLATFORMS
     ):
         del hass.data[DOMAIN][config_entry.unique_id]
 

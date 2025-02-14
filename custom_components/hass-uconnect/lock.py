@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from py_uconnect.client import Vehicle
 from py_uconnect.command import *
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
 from .coordinator import UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
 
@@ -45,6 +45,10 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    # Do not add entities if not configured
+    if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
+        return
+
     coordinator = hass.data[DOMAIN][config_entry.unique_id]
     coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.unique_id
