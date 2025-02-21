@@ -8,7 +8,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 - Jeep: Works ✅ 
 - Fiat: Works ✅ 
-- Ram: Unknown ❔
+- Ram: Works ✅ 
 - Dodge: Unknown ❔
 - AlfaRomeo: Unknown ❔
 - Chrysler: Unknown ❔
