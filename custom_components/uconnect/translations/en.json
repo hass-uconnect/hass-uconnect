@@ -31,7 +31,8 @@
             "init": {
                 "title": "API Configuration",
                 "data": {
-                    "scan_interval": "Scan Interval (min)"
+                    "scan_interval": "Scan Interval (min)",
+                    "add_command_entities": "Add command entities (Button/Lock/Switch)"
                 }
             }
         }

@@ -105,8 +105,11 @@ async def async_setup_entry(
     for vehicle in coordinator.client.vehicles.values():
         for description in SWITCH_DESCRIPTIONS:
             if (
-                description.command_on.name in vehicle.supported_commands
-                or description.command_off.name in vehicle.supported_commands
+                description.command_on is not None
+                and description.command_on.name in vehicle.supported_commands
+            ) or (
+                description.command_off is not None
+                and description.command_off.name in vehicle.supported_commands
             ):
                 entities.append(UconnectSwitch(coordinator, description, vehicle))
 
