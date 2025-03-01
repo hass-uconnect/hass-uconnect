@@ -55,10 +55,10 @@ SUPPORTED_SERVICES = [
     SERVICE_REFRESH_LOCATION,
 ]
 
-SERVICES_COMMANDS = {
+SERVICES_COMMANDS: dict[str, Command] = {
     SERVICE_ENGINE_ON: COMMAND_ENGINE_ON,
     SERVICE_ENGINE_OFF: COMMAND_ENGINE_OFF,
-    SERVICE_COMFORT_ON: SERVICE_COMFORT_ON,
+    SERVICE_COMFORT_ON: COMMAND_COMFORT_ON,
     SERVICE_COMFORT_OFF: COMMAND_COMFORT_OFF,
     SERVICE_HVAC_ON: COMMAND_HVAC_ON,
     SERVICE_HVAC_OFF: COMMAND_HVAC_OFF,
@@ -79,21 +79,42 @@ SERVICES_COMMANDS = {
 
 
 @callback
-def async_setup_services(hass: HomeAssistant) -> bool:
+def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up services for Uconnect"""
 
     async def async_call_service(call: ServiceCall):
-        coordinator = _get_coordinator_from_device(hass, call)
+        coordinator: UconnectDataUpdateCoordinator = _get_coordinator_from_device(
+            hass, call
+        )
         vin = _get_vin_from_device(hass, call)
 
         if call.service != SERVICE_UPDATE:
             cmd = SERVICES_COMMANDS[call.service]
+            if not cmd.name in coordinator.client.vehicles[vin].supported_commands:
+                raise Exception(f"Service {call.service} is not supported by this car")
+
             await coordinator.async_command(vin, cmd)
         else:
             await coordinator.async_refresh()
 
+    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
+        config_entry.unique_id
+    ]
+
+    # Get a set of all supported commands from all cars
+    supported_commands = set()
+    for v in coordinator.client.vehicles.values():
+        for cmd in v.supported_commands:
+            if cmd in COMMANDS_BY_NAME:
+                supported_commands.add(cmd)
+
     for service in SUPPORTED_SERVICES:
-        hass.services.async_register(DOMAIN, service, async_call_service)
+        # Create the service only if it's supported by at least one car
+        if (
+            service == SERVICE_UPDATE
+            or SERVICES_COMMANDS[service].name in supported_commands
+        ):
+            hass.services.async_register(DOMAIN, service, async_call_service)
 
     return True
 
