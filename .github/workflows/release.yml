@@ -17,4 +17,4 @@ jobs:
     - uses: ncipollo/release-action@v1
       with:
         makeLatest: true
-        body: "Home Assistnat Uconnect Release"
+        body: "Home Assistant Uconnect Release"
