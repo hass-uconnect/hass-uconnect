@@ -8,6 +8,7 @@ import logging
 
 from py_uconnect import Client
 from py_uconnect.command import Command
+from py_uconnect.api import CHARGING_LEVELS_BY_NAME
 from py_uconnect.brands import BRANDS as BRANDS_BY_NAME
 
 from homeassistant.config_entries import ConfigEntry
@@ -18,7 +19,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CONF_BRAND_REGION,
@@ -76,8 +77,24 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_command(self, vin: str, cmd: Command) -> None:
         """Execute the given command"""
 
-        await self.hass.async_add_executor_job(self.client.command_verify, vin, cmd)
+        r = await self.hass.async_add_executor_job(self.client.command_verify, vin, cmd)
         await self.async_refresh()
+
+        if not r:
+            raise Exception("Command execution failed")
+
+    async def async_set_charging_level(self, vin: str, level: str) -> None:
+        """Set the charging level"""
+
+        level = CHARGING_LEVELS_BY_NAME[level]
+
+        r = await self.hass.async_add_executor_job(
+            self.client.set_charging_level_verify, vin, level
+        )
+        await self.async_refresh()
+
+        if not r:
+            raise Exception("Set charging level failed")
 
     async def update_options(self, hass: HomeAssistant, config_entry: ConfigEntry):
         self.update_interval = timedelta(

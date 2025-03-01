@@ -61,11 +61,6 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         icon="mdi:ev-station",
     ),
     UconnectSensorEntityDescription(
-        key="charging_level_preference",
-        name="Charging Level Pref",
-        icon="mdi:cog-stop",
-    ),
-    UconnectSensorEntityDescription(
         key="battery_voltage",
         name="12V Battery",
         icon="mdi:car-battery",
@@ -141,8 +136,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=PERCENTAGE,
     ),
     UconnectSensorEntityDescription(
-        key="last_full_update",
-        name="Last Full Update At",
+        key="timestamp_info",
+        name="Last Info Update At",
+        icon="mdi:update",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    UconnectSensorEntityDescription(
+        key="timestamp_status",
+        name="Last Status Update At",
         icon="mdi:update",
         device_class=SensorDeviceClass.TIMESTAMP,
     ),
