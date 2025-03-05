@@ -148,7 +148,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     UconnectBinarySensorEntityDescription(
         key="fuel_low",
         name="Low Fuel",
-        on_icon="mdi:gas_station",
+        on_icon="mdi:gas-station",
         off_icon="mdi:fuel",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
