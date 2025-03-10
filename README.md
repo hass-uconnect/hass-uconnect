@@ -10,7 +10,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Fiat: Works ✅ 
 - Ram: Works ✅ 
 - Dodge: Unknown ❔
-- Alfa Romeo: Unknown ❔
+- Alfa Romeo: Works ✅ 
 - Chrysler: Unknown ❔
 - Maserati: Unknown ❔
 
