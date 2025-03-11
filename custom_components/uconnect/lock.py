@@ -61,8 +61,7 @@ async def async_setup_entry(
             if (
                 description.command_on.name in vehicle.supported_commands
                 or description.command_off.name in vehicle.supported_commands
-            ) and description.is_locked(vehicle) is not None:
-
+            ):
                 entities.append(UconnectLock(coordinator, description, vehicle))
 
     async_add_entities(entities)
