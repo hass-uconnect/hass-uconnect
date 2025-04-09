@@ -73,7 +73,8 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Fill e-mail, password and optionally PIN if you want to issue commands
 
 After the integration is initialized - you might want to go into its options and enable the creation of command entities:
-![image](https://github.com/user-attachments/assets/21df1f8e-6e7c-4663-8f18-c89e577351b5)
+
+![image](https://github.com/user-attachments/assets/587c9ec0-bbd0-4918-b84b-4235316a58cf)
 
 ## Example dashboard
 
