@@ -72,9 +72,12 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Go to your integrations configuration page once started and add the Uconnect integration
 - Fill e-mail, password and optionally PIN if you want to issue commands
 
-## Example
+After the integration is initialized - you might want to go into its options and enable the creation of command entities:
+![image](https://github.com/user-attachments/assets/21df1f8e-6e7c-4663-8f18-c89e577351b5)
 
-![example](dashboard.png)
+## Example dashboard
+
+![image](https://github.com/user-attachments/assets/ceaa1133-be82-4506-a915-7e7c50fb58b6)
 
 ## Useful Resources
 
