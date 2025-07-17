@@ -50,6 +50,20 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
+        key="range_gas",
+        name="Driving Range (Gas)",
+        icon="mdi:road-variant",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UNIT_DYNAMIC,
+    ),
+    UconnectSensorEntityDescription(
+        key="range_total",
+        name="Driving Range (Total)",
+        icon="mdi:road-variant",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UNIT_DYNAMIC,
+    ),
+    UconnectSensorEntityDescription(
         key="state_of_charge",
         name="HVBattery Charge",
         native_unit_of_measurement=PERCENTAGE,
@@ -175,7 +189,8 @@ async def async_setup_entry(
                 getattr(vehicle, description.key, None) is not None
                 or description.get is not None
             ):
-                entities.append(UconnectSensor(coordinator, description, vehicle))
+                entities.append(UconnectSensor(
+                    coordinator, description, vehicle))
 
     async_add_entities(entities)
     return True
