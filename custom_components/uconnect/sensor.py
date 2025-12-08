@@ -11,6 +11,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.const import (
     PERCENTAGE,
@@ -40,6 +41,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Odometer",
         icon="mdi:counter",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -47,6 +49,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Driving Range",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -54,6 +57,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Driving Range (Gas)",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -61,12 +65,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Driving Range (Total)",
         icon="mdi:road-variant",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
         key="state_of_charge",
         name="HVBattery Charge",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.BATTERY,
     ),
     UconnectSensorEntityDescription(
@@ -79,6 +85,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="12V Battery",
         icon="mdi:car-battery",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.VOLTAGE,
     ),
     UconnectSensorEntityDescription(
@@ -86,6 +93,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Time to Charge L2",
         icon="mdi:battery-clock",
         native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.DURATION,
     ),
     UconnectSensorEntityDescription(
@@ -93,6 +101,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Time to Charge L3",
         icon="mdi:battery-clock",
         native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.DURATION,
     ),
     UconnectSensorEntityDescription(
@@ -100,6 +109,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Distance to Service",
         icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -107,6 +117,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Days till service needed",
         icon="mdi:car-wrench",
         device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfTime.DAYS,
     ),
     UconnectSensorEntityDescription(
@@ -114,6 +125,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Front Left Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -121,6 +133,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Front Right Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -128,6 +141,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Rear Left Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -135,6 +149,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Rear Right Tire Pressure",
         icon="mdi:tire",
         device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
     ),
     UconnectSensorEntityDescription(
@@ -142,12 +157,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Oil Level",
         icon="mdi:oil",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     UconnectSensorEntityDescription(
         key="fuel_amount",
         name="Fuel Remaining",
         icon="mdi:fuel",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     UconnectSensorEntityDescription(
         key="timestamp_info",

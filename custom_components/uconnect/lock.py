@@ -20,10 +20,10 @@ from .entity import UconnectEntity
 class UconnectLockEntityDescription(LockEntityDescription):
     """A class that describes custom lock entities."""
 
-    icon_locked: str = None
-    icon_unlocked: str = None
-    command_on: Command = None
-    command_off: Command = None
+    icon_locked: str | None = None
+    icon_unlocked: str | None = None
+    command_on: Command | None = None
+    command_off: Command | None = None
     is_locked: Callable[[Vehicle], bool] | None = None
 
 
@@ -59,10 +59,13 @@ async def async_setup_entry(
     for vehicle in coordinator.client.vehicles.values():
         for description in LOCK_DESCRIPTIONS:
             if (
-                description.command_on.name in vehicle.supported_commands
-                or description.command_off.name in vehicle.supported_commands
+                description.is_locked is not None and (
+                    description.command_on.name in vehicle.supported_commands
+                    or description.command_off.name in vehicle.supported_commands
+                )
             ):
-                entities.append(UconnectLock(coordinator, description, vehicle))
+                entities.append(UconnectLock(
+                    coordinator, description, vehicle))
 
     async_add_entities(entities)
     return True

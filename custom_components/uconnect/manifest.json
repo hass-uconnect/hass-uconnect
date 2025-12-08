@@ -15,7 +15,7 @@
         "custom_components.uconnect"
     ],
     "requirements": [
-        "py-uconnect==0.3.9"
+        "py-uconnect==0.3.10"
     ],
-    "version": "0.3.11"
+    "version": "0.3.12"
 }
