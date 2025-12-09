@@ -31,7 +31,7 @@ class UconnectSwitchEntityDescription(SwitchEntityDescription):
     on_icon: str | None = None
     off_icon: str | None = None
     is_on: Callable[[Vehicle], bool] | None = None
-    is_available: Callable[[Vehicle], bool] | None = None
+    is_available: Callable[[Vehicle], bool] = lambda x: True
 
 
 SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
@@ -123,7 +123,7 @@ async def async_setup_entry(
             ) or (
                 description.command_off is not None
                 and description.command_off.name in vehicle.supported_commands
-            )) and (description.is_available is not None and description.is_available(vehicle)):
+            )) and description.is_available(vehicle):
                 entities.append(UconnectSwitch(
                     coordinator, description, vehicle))
 
