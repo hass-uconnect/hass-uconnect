@@ -19,6 +19,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -81,7 +82,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         await self.async_refresh()
 
         if not r:
-            raise Exception("Command execution failed")
+            raise HomeAssistantError("Command execution failed")
 
     async def async_set_charging_level(self, vin: str, level: str) -> None:
         """Set the charging level"""
@@ -96,7 +97,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         await self.async_refresh()
 
         if not r:
-            raise Exception("Set charging level failed")
+            raise HomeAssistantError("Set charging level failed")
 
     async def update_options(self, hass: HomeAssistant, config_entry: ConfigEntry):
         self.update_interval = timedelta(
