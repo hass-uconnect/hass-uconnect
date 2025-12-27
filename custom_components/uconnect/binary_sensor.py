@@ -212,13 +212,11 @@ class UconnectBinarySensor(BinarySensorEntity, UconnectEntity):
     def icon(self):
         """Return the icon to use in the frontend, if any."""
 
-        if (
-            self.entity_description.on_icon == self.entity_description.off_icon
-        ) is None:
-            return BinarySensorEntity.icon
+        if self.entity_description.on_icon is None:
+            return None
 
         return (
             self.entity_description.on_icon
             if self.is_on
-            else self.entity_description.off_icon
+            else self.entity_description.off_icon or self.entity_description.on_icon
         )
