@@ -46,10 +46,14 @@ class UconnectTracker(TrackerEntity, UconnectEntity):
 
     @property
     def latitude(self):
+        if self.vehicle.location is None:
+            return None
         return self.vehicle.location.latitude
 
     @property
     def longitude(self):
+        if self.vehicle.location is None:
+            return None
         return self.vehicle.location.longitude
 
     @property
