@@ -203,7 +203,7 @@ class UconnectBinarySensor(BinarySensorEntity, UconnectEntity):
         else:
             v = getattr(self.vehicle, self.key)
 
-        if self.postprocess is not None:
+        if v is not None and self.postprocess is not None:
             v = self.postprocess(v)
 
         return v
