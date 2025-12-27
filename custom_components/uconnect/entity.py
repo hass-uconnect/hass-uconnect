@@ -15,7 +15,12 @@ class UconnectEntity(CoordinatorEntity):
     def __init__(self, coordinator: UconnectDataUpdateCoordinator, vehicle: Vehicle):
         """Initialize the base entity."""
         super().__init__(coordinator)
-        self.vehicle: Vehicle = vehicle
+        self._vin = vehicle.vin
+
+    @property
+    def vehicle(self) -> Vehicle:
+        """Get the current vehicle object from the coordinator."""
+        return self.coordinator.client.get_vehicles()[self._vin]
 
     @property
     def device_info(self):
