@@ -86,6 +86,8 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_charging_level(self, vin: str, level: str) -> None:
         """Set the charging level"""
 
+        if level not in CHARGING_LEVELS_BY_NAME:
+            raise ValueError(f"Invalid charging level: {level}")
         level = CHARGING_LEVELS_BY_NAME[level]
 
         r = await self.hass.async_add_executor_job(
