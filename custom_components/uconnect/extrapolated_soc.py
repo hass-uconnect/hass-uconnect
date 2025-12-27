@@ -295,15 +295,23 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         now = datetime.now(timezone.utc)
 
         if current_soc is not None:
-            # Learn correction factor from actual vs predicted changes
-            self._learn_correction_factor(current_soc, now)
-            # Learn drain rate from actual vs predicted changes when idle
-            self._learn_drain_rate(current_soc, now)
+            # Only update baseline if SOC actually changed
+            # This preserves extrapolation continuity across HA restarts
+            soc_changed = (
+                self._state.last_actual_soc is None
+                or current_soc != self._state.last_actual_soc
+            )
 
-            # Update state with actual values
-            self._state.last_actual_soc = current_soc
-            self._state.last_actual_soc_time = now
-            self._state.last_estimated_soc = current_soc
+            if soc_changed:
+                # Learn correction factor from actual vs predicted changes
+                self._learn_correction_factor(current_soc, now)
+                # Learn drain rate from actual vs predicted changes when idle
+                self._learn_drain_rate(current_soc, now)
+
+                # Update state with actual values
+                self._state.last_actual_soc = current_soc
+                self._state.last_actual_soc_time = now
+                self._state.last_estimated_soc = current_soc
 
         # Update charging state
         self._state.is_charging = is_charging
