@@ -50,13 +50,10 @@ async def async_setup_entry(
     if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
         return
 
-    coordinator = hass.data[DOMAIN][config_entry.unique_id]
     coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.unique_id
     ]
     entities: list[UconnectLock] = []
-
-    entities = []
     for vehicle in coordinator.client.vehicles.values():
         for description in LOCK_DESCRIPTIONS:
             if (
