@@ -78,7 +78,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
         command_off=COMMAND_DOORS_UNLOCK,
         is_on=lambda x: getattr(x, "door_driver_locked", None),
         is_available=lambda x: getattr(
-            x, "door_driver_locked", None) is None,
+            x, "door_driver_locked", None) is not None,
         device_class=SwitchDeviceClass.SWITCH,
     ),
     UconnectSwitchEntityDescription(
