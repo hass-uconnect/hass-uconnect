@@ -154,21 +154,20 @@ def _get_coordinator_from_device(
         return hass.data[DOMAIN][coordinators[0]]
 
     device_entry = device_registry.async_get(hass).async_get(call.data[ATTR_DEVICE_ID])
-    config_entry_ids = device_entry.config_entries
+    if device_entry is None:
+        raise ValueError(f"Device not found: {call.data.get(ATTR_DEVICE_ID)}")
+
     config_entry_id = next(
         (
-            config_entry_id
-            for config_entry_id in config_entry_ids
-            if cast(
-                ConfigEntry,
-                hass.config_entries.async_get_entry(config_entry_id),
-            ).domain
-            == DOMAIN
+            entry_id
+            for entry_id in device_entry.config_entries
+            if (entry := hass.config_entries.async_get_entry(entry_id))
+            and entry.domain == DOMAIN
         ),
         None,
     )
-    config_entry_unique_id = hass.config_entries.async_get_entry(
-        config_entry_id
-    ).unique_id
+    if config_entry_id is None:
+        raise ValueError(f"No config entry found for device: {call.data.get(ATTR_DEVICE_ID)}")
 
-    return hass.data[DOMAIN][config_entry_unique_id]
+    config_entry = hass.config_entries.async_get_entry(config_entry_id)
+    return hass.data[DOMAIN][config_entry.unique_id]
