@@ -25,7 +25,5 @@ class UconnectEntity(CoordinatorEntity):
             identifiers={(DOMAIN, self.vehicle.vin)},
             manufacturer=self.vehicle.make,
             model=self.vehicle.model,
-            name=f"{self.vehicle.make} {
-                self.vehicle.model}"
-            or self.vehicle_nickname,
+            name=f"{self.vehicle.make} {self.vehicle.nickname or self.vehicle.model}",
         )
