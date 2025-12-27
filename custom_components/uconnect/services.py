@@ -135,12 +135,14 @@ def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
             return list(vehicles.keys())[0]
 
     device_entry = device_registry.async_get(hass).async_get(call.data[ATTR_DEVICE_ID])
+    if device_entry is None:
+        raise ValueError(f"Device not found: {call.data.get(ATTR_DEVICE_ID)}")
 
     for entry in device_entry.identifiers:
         if entry[0] == DOMAIN:
-            vin = entry[1]
+            return entry[1]
 
-    return vin
+    raise ValueError(f"No VIN found for device: {call.data.get(ATTR_DEVICE_ID)}")
 
 
 def _get_coordinator_from_device(
