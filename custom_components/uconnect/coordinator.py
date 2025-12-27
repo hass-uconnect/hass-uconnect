@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-import traceback
 import logging
 
 from py_uconnect import Client
@@ -68,10 +67,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             await self.hass.async_add_executor_job(self.client.refresh)
         except Exception:
-            _LOGGER.exception(
-                f"Update failed, falling back to cached: {
-                    traceback.format_exc()}"
-            )
+            _LOGGER.exception("Update failed, falling back to cached data")
 
         return self.data
 
