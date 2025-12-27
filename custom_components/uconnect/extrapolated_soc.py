@@ -246,7 +246,27 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             self.async_write_ha_state()
 
     async def _async_daily_deep_refresh(self, _now: datetime) -> None:
-        """Trigger daily deep refresh to get fresh SOC data for learning."""
+        """Trigger daily deep refresh to get fresh SOC data for learning.
+
+        Only refreshes if the car hasn't been powered on in the last 24 hours,
+        since driving would provide fresh data anyway.
+        """
+        if self._state.last_actual_soc_time is None:
+            return
+
+        now = datetime.now(timezone.utc)
+        hours_since_update = (
+            now - self._state.last_actual_soc_time
+        ).total_seconds() / 3600.0
+
+        if hours_since_update < 24.0:
+            _LOGGER.debug(
+                "Skipping daily deep refresh for %s - last update was %.1f hours ago",
+                self.vehicle.vin,
+                hours_since_update,
+            )
+            return
+
         _LOGGER.info("Triggering daily deep refresh for %s", self.vehicle.vin)
         try:
             await self.coordinator.async_command(self.vehicle.vin, COMMAND_DEEP_REFRESH)
