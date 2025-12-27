@@ -7,6 +7,7 @@ from the vehicle, based on charging status and time-to-full estimates.
 from __future__ import annotations
 
 import logging
+import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -18,8 +19,13 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import (
+    async_track_time_change,
+    async_track_time_interval,
+)
 from homeassistant.helpers.restore_state import RestoreEntity
+
+from py_uconnect.command import COMMAND_DEEP_REFRESH
 
 from py_uconnect.client import Vehicle
 
@@ -39,6 +45,17 @@ CORRECTION_EMA_ALPHA = 0.3  # Exponential moving average factor for correction l
 MIN_TIME_FOR_LEARNING_HOURS = 0.05  # Minimum 3 minutes for learning
 MIN_SOC_CHANGE_FOR_LEARNING = 0.5  # Minimum 0.5% SOC change for learning
 
+# Constants for idle drain estimation
+DEFAULT_IDLE_DRAIN_RATE = 0.04  # Default 0.04%/hour ≈ 1%/day
+MIN_IDLE_DRAIN_RATE = 0.0  # Minimum drain rate
+MAX_IDLE_DRAIN_RATE = 0.5  # Maximum drain rate (0.5%/hour ≈ 12%/day)
+MIN_IDLE_TIME_FOR_LEARNING_HOURS = 1.0  # Minimum 1 hour idle for learning drain rate
+IDLE_DRAIN_EMA_ALPHA = 0.2  # Slower learning for drain rate (less frequent data points)
+
+# Constants for daily deep refresh
+DEEP_REFRESH_HOUR_START = 2  # Start of window for daily deep refresh (2 AM)
+DEEP_REFRESH_HOUR_END = 5  # End of window for daily deep refresh (5 AM)
+
 
 @dataclass
 class SocEstimationState:
@@ -48,7 +65,9 @@ class SocEstimationState:
     last_actual_soc_time: datetime | None = None
     last_estimated_soc: float | None = None
     is_charging: bool = False
+    is_idle: bool = False  # Not charging and ignition off
     charging_rate_pct_per_hour: float = 0.0
+    idle_drain_rate_pct_per_hour: float = DEFAULT_IDLE_DRAIN_RATE
     learned_correction_factor: float = DEFAULT_CORRECTION_FACTOR
     target_soc: float = 100.0
 
@@ -63,7 +82,9 @@ class SocEstimationState:
             ),
             "last_estimated_soc": self.last_estimated_soc,
             "is_charging": self.is_charging,
+            "is_idle": self.is_idle,
             "charging_rate_pct_per_hour": self.charging_rate_pct_per_hour,
+            "idle_drain_rate_pct_per_hour": self.idle_drain_rate_pct_per_hour,
             "learned_correction_factor": self.learned_correction_factor,
             "target_soc": self.target_soc,
         }
@@ -84,7 +105,11 @@ class SocEstimationState:
             ),
             last_estimated_soc=data.get("last_estimated_soc"),
             is_charging=data.get("is_charging", False),
+            is_idle=data.get("is_idle", False),
             charging_rate_pct_per_hour=data.get("charging_rate_pct_per_hour", 0.0),
+            idle_drain_rate_pct_per_hour=data.get(
+                "idle_drain_rate_pct_per_hour", DEFAULT_IDLE_DRAIN_RATE
+            ),
             learned_correction_factor=correction,
             target_soc=data.get("target_soc", 100.0),
         )
@@ -148,6 +173,11 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         self._state = SocEstimationState()
         self._unsub_timer: callable | None = None
+        self._unsub_deep_refresh: callable | None = None
+        self._deep_refresh_hour: int = random.randint(
+            DEEP_REFRESH_HOUR_START, DEEP_REFRESH_HOUR_END
+        )
+        self._deep_refresh_minute: int = random.randint(0, 59)
 
     async def async_added_to_hass(self) -> None:
         """Restore state when added to hass."""
@@ -180,19 +210,48 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             EXTRAPOLATION_UPDATE_INTERVAL,
         )
 
+        # Set up daily deep refresh at random time between 2-5 AM
+        self._unsub_deep_refresh = async_track_time_change(
+            self.hass,
+            self._async_daily_deep_refresh,
+            hour=self._deep_refresh_hour,
+            minute=self._deep_refresh_minute,
+            second=0,
+        )
+        _LOGGER.info(
+            "Scheduled daily deep refresh for %s at %02d:%02d",
+            self.vehicle.vin,
+            self._deep_refresh_hour,
+            self._deep_refresh_minute,
+        )
+
     async def async_will_remove_from_hass(self) -> None:
-        """Clean up timer when entity is removed."""
+        """Clean up timers when entity is removed."""
         if self._unsub_timer:
             self._unsub_timer()
             self._unsub_timer = None
+        if self._unsub_deep_refresh:
+            self._unsub_deep_refresh()
+            self._unsub_deep_refresh = None
         await super().async_will_remove_from_hass()
 
     @callback
     def _async_update_extrapolation(self, _now: datetime) -> None:
         """Periodically update the extrapolated value."""
-        # Only update if charging - no point in frequent updates otherwise
-        if self._state.is_charging and self._state.charging_rate_pct_per_hour > 0:
+        # Update if charging or idle (both need extrapolation)
+        if (
+            (self._state.is_charging and self._state.charging_rate_pct_per_hour > 0)
+            or (self._state.is_idle and self._state.idle_drain_rate_pct_per_hour > 0)
+        ):
             self.async_write_ha_state()
+
+    async def _async_daily_deep_refresh(self, _now: datetime) -> None:
+        """Trigger daily deep refresh to get fresh SOC data for learning."""
+        _LOGGER.info("Triggering daily deep refresh for %s", self.vehicle.vin)
+        try:
+            await self.coordinator.async_command(self.vehicle.vin, COMMAND_DEEP_REFRESH)
+        except Exception as err:
+            _LOGGER.warning("Daily deep refresh failed for %s: %s", self.vehicle.vin, err)
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -204,6 +263,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         """Update estimation state from vehicle data."""
         current_soc = getattr(self.vehicle, "state_of_charge", None)
         is_charging = getattr(self.vehicle, "charging", False) or False
+        ignition_on = getattr(self.vehicle, "ignition_on", False) or False
         time_to_full_l2 = getattr(self.vehicle, "time_to_fully_charge_l2", None)
         time_to_full_l3 = getattr(self.vehicle, "time_to_fully_charge_l3", None)
 
@@ -217,6 +277,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_soc is not None:
             # Learn correction factor from actual vs predicted changes
             self._learn_correction_factor(current_soc, now)
+            # Learn drain rate from actual vs predicted changes when idle
+            self._learn_drain_rate(current_soc, now)
 
             # Update state with actual values
             self._state.last_actual_soc = current_soc
@@ -225,6 +287,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         # Update charging state
         self._state.is_charging = is_charging
+
+        # Update idle state (not charging and ignition off)
+        self._state.is_idle = not is_charging and not ignition_on
 
         # Calculate charging rate if charging with valid data
         if is_charging and current_soc is not None and time_to_full is not None:
@@ -322,6 +387,60 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             expected_change,
         )
 
+    def _learn_drain_rate(
+        self,
+        current_soc: float,
+        now: datetime,
+    ) -> None:
+        """Learn idle drain rate by comparing actual vs predicted SOC changes.
+
+        This helps estimate battery drain when the vehicle is idle (not charging,
+        ignition off).
+        """
+        if (
+            self._state.last_actual_soc is None
+            or self._state.last_actual_soc_time is None
+            or not self._state.is_idle
+        ):
+            return
+
+        elapsed_hours = (
+            now - self._state.last_actual_soc_time
+        ).total_seconds() / 3600.0
+
+        # Need sufficient idle time to learn drain rate accurately
+        if elapsed_hours < MIN_IDLE_TIME_FOR_LEARNING_HOURS:
+            return
+
+        actual_change = self._state.last_actual_soc - current_soc  # Drain is positive
+
+        # Only learn from meaningful drain (ignore small fluctuations or gains)
+        if actual_change < MIN_SOC_CHANGE_FOR_LEARNING:
+            return
+
+        # Calculate observed drain rate
+        observed_drain_rate = actual_change / elapsed_hours
+
+        # Clamp to reasonable bounds
+        observed_drain_rate = max(
+            MIN_IDLE_DRAIN_RATE,
+            min(MAX_IDLE_DRAIN_RATE, observed_drain_rate),
+        )
+
+        # Update learned drain rate with exponential moving average
+        self._state.idle_drain_rate_pct_per_hour = (
+            IDLE_DRAIN_EMA_ALPHA * observed_drain_rate
+            + (1 - IDLE_DRAIN_EMA_ALPHA) * self._state.idle_drain_rate_pct_per_hour
+        )
+
+        _LOGGER.debug(
+            "Updated idle drain rate to %.3f%%/h for %s (actual drain: %.1f%% over %.1fh)",
+            self._state.idle_drain_rate_pct_per_hour,
+            self.vehicle.vin,
+            actual_change,
+            elapsed_hours,
+        )
+
     @property
     def available(self) -> bool:
         """Return if entity is available."""
@@ -343,11 +462,6 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         if current_vehicle_soc is None:
             return None
-
-        # If not charging, always return fresh vehicle SOC (not stored value)
-        # This ensures we show current data even if state restoration is stale
-        if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
-            return current_vehicle_soc
 
         # For extrapolation, we need the stored timestamp
         if self._state.last_actual_soc_time is None:
@@ -371,17 +485,28 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             )
             return current_vehicle_soc
 
-        # Calculate extrapolated SOC
-        # Use stored last_actual_soc as base for extrapolation (the value at last update time)
-        # This is correct because we're calculating: base + rate * time_since_base
         base_soc = self._state.last_actual_soc
         if base_soc is None:
             return current_vehicle_soc
 
-        # If already at or above target, no need to extrapolate
+        # Handle idle drain extrapolation
+        if self._state.is_idle and self._state.idle_drain_rate_pct_per_hour > 0:
+            extrapolated = base_soc - (
+                self._state.idle_drain_rate_pct_per_hour * elapsed_hours
+            )
+            # Clamp to valid range (don't go below 0)
+            extrapolated = max(0.0, extrapolated)
+            return round(extrapolated, 1)
+
+        # If not charging (and not idle), return fresh vehicle SOC
+        if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
+            return current_vehicle_soc
+
+        # If already at or above target, no need to extrapolate charging
         if current_vehicle_soc >= self._state.target_soc:
             return current_vehicle_soc
 
+        # Calculate extrapolated SOC for charging
         rate = self._state.charging_rate_pct_per_hour
         correction = self._state.learned_correction_factor
 
@@ -404,8 +529,12 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 else None
             ),
             "is_charging": self._state.is_charging,
+            "is_idle": self._state.is_idle,
             "charging_rate_pct_per_hour": round(
                 self._state.charging_rate_pct_per_hour, 2
+            ),
+            "idle_drain_rate_pct_per_hour": round(
+                self._state.idle_drain_rate_pct_per_hour, 3
             ),
             "correction_factor": round(self._state.learned_correction_factor, 2),
             "target_soc": self._state.target_soc,
