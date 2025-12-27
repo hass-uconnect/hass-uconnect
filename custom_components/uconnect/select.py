@@ -42,13 +42,10 @@ async def async_setup_entry(
     if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
         return
 
-    coordinator = hass.data[DOMAIN][config_entry.unique_id]
     coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.unique_id
     ]
     entities: list[UconnectSelectSetChargingLevel] = []
-
-    entities = []
     for vehicle in coordinator.client.vehicles.values():
         if getattr(vehicle, "charging_level_preference", None) is not None:
             entities.append(UconnectSelectSetChargingLevel(coordinator, vehicle))
