@@ -115,6 +115,41 @@ class SocEstimationState:
         )
 
 
+def select_time_to_full(
+    charging_level: str | int | None,
+    time_l2: float | None,
+    time_l3: float | None,
+) -> float | None:
+    """Select the appropriate time-to-full value based on charging_level.
+
+    Uses the charging_level sensor to determine which charger is connected,
+    falling back to heuristics if not available.
+    """
+    valid_l2 = time_l2 is not None and time_l2 > 0
+    valid_l3 = time_l3 is not None and time_l3 > 0
+
+    # Use charging_level to select the right time-to-full
+    if charging_level is not None:
+        # Handle both int and string types
+        level_str = str(charging_level).upper()
+        if "3" in level_str or "DC" in level_str or "FAST" in level_str:
+            if valid_l3:
+                return time_l3
+        elif "2" in level_str or "AC" in level_str:
+            if valid_l2:
+                return time_l2
+
+    # Fallback: use whichever is available
+    if valid_l2 and valid_l3:
+        # Both available - use the smaller one (likely the active charger)
+        return min(time_l2, time_l3)
+    elif valid_l3:
+        return time_l3
+    elif valid_l2:
+        return time_l2
+    return None
+
+
 def calculate_charging_rate(
     current_soc: float,
     time_to_full_minutes: float | None,
@@ -289,7 +324,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         time_to_full_l3 = getattr(self.vehicle, "time_to_fully_charge_l3", None)
 
         # Select the appropriate time-to-full based on charging_level sensor
-        time_to_full = self._select_time_to_full(
+        time_to_full = select_time_to_full(
             charging_level, time_to_full_l2, time_to_full_l3
         )
 
@@ -361,41 +396,6 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         # Default target SOC to 100% (no target SOC limit for this vehicle type)
         self._state.target_soc = 100.0
-
-    def _select_time_to_full(
-        self,
-        charging_level: str | None,
-        time_l2: float | None,
-        time_l3: float | None,
-    ) -> float | None:
-        """Select the appropriate time-to-full value based on charging_level.
-
-        Uses the charging_level sensor to determine which charger is connected,
-        falling back to heuristics if not available.
-        """
-        valid_l2 = time_l2 is not None and time_l2 > 0
-        valid_l3 = time_l3 is not None and time_l3 > 0
-
-        # Use charging_level to select the right time-to-full
-        if charging_level is not None:
-            # Handle both int and string types
-            level_str = str(charging_level).upper()
-            if "3" in level_str or "DC" in level_str or "FAST" in level_str:
-                if valid_l3:
-                    return time_l3
-            elif "2" in level_str or "AC" in level_str:
-                if valid_l2:
-                    return time_l2
-
-        # Fallback: use whichever is available
-        if valid_l2 and valid_l3:
-            # Both available - use the smaller one (likely the active charger)
-            return min(time_l2, time_l3)
-        elif valid_l3:
-            return time_l3
-        elif valid_l2:
-            return time_l2
-        return None
 
     def _learn_correction_factor(
         self,
@@ -655,7 +655,7 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         time_to_full_l3 = getattr(self.vehicle, "time_to_fully_charge_l3", None)
 
         # Select the appropriate time-to-full based on charging_level
-        time_to_full = self._select_time_to_full(
+        time_to_full = select_time_to_full(
             charging_level, time_to_full_l2, time_to_full_l3
         )
 
@@ -664,35 +664,6 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
 
         rate = calculate_charging_rate(current_soc, time_to_full)
         return round(rate, 1)
-
-    def _select_time_to_full(
-        self,
-        charging_level: str | int | None,
-        time_l2: float | None,
-        time_l3: float | None,
-    ) -> float | None:
-        """Select the appropriate time-to-full value based on charging_level."""
-        valid_l2 = time_l2 is not None and time_l2 > 0
-        valid_l3 = time_l3 is not None and time_l3 > 0
-
-        # Use charging_level to select the right time-to-full
-        if charging_level is not None:
-            level_str = str(charging_level).upper()
-            if "3" in level_str or "DC" in level_str or "FAST" in level_str:
-                if valid_l3:
-                    return time_l3
-            elif "2" in level_str or "AC" in level_str:
-                if valid_l2:
-                    return time_l2
-
-        # Fallback: use whichever is available
-        if valid_l2 and valid_l3:
-            return min(time_l2, time_l3)
-        elif valid_l3:
-            return time_l3
-        elif valid_l2:
-            return time_l2
-        return None
 
     @property
     def available(self) -> bool:
