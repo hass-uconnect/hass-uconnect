@@ -371,11 +371,12 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         # Use charging_level to select the right time-to-full
         if charging_level is not None:
-            level_upper = charging_level.upper()
-            if "3" in level_upper or "DC" in level_upper or "FAST" in level_upper:
+            # Handle both int and string types
+            level_str = str(charging_level).upper()
+            if "3" in level_str or "DC" in level_str or "FAST" in level_str:
                 if valid_l3:
                     return time_l3
-            elif "2" in level_upper or "AC" in level_upper:
+            elif "2" in level_str or "AC" in level_str:
                 if valid_l2:
                     return time_l2
 
