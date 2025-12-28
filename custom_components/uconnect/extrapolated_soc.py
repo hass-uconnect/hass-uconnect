@@ -10,7 +10,7 @@ import logging
 import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Callable
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -89,26 +89,59 @@ class SocEstimationState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SocEstimationState":
-        """Create state from dictionary."""
+        """Create state from dictionary.
+
+        Validates types to handle corrupted state gracefully.
+        """
+        if not isinstance(data, dict):
+            return cls()
+
+        # Parse last_actual_soc (must be float or None)
+        last_soc = data.get("last_actual_soc")
+        if last_soc is not None and not isinstance(last_soc, (int, float)):
+            last_soc = None
+
+        # Parse timestamp
         last_time = data.get("last_actual_soc_time")
+        last_time_parsed = None
+        if isinstance(last_time, str):
+            try:
+                last_time_parsed = datetime.fromisoformat(last_time)
+            except ValueError:
+                pass
+
         # Handle migration from old "learned_efficiency" to new "learned_correction_factor"
         correction = data.get(
             "learned_correction_factor",
             data.get("learned_efficiency", DEFAULT_CORRECTION_FACTOR)
         )
+        if not isinstance(correction, (int, float)):
+            correction = DEFAULT_CORRECTION_FACTOR
+
+        # Parse drain rate with validation
+        drain_rate = data.get("idle_drain_rate_pct_per_hour", DEFAULT_IDLE_DRAIN_RATE)
+        if not isinstance(drain_rate, (int, float)):
+            drain_rate = DEFAULT_IDLE_DRAIN_RATE
+
+        # Parse charging rate with validation
+        charging_rate = data.get("charging_rate_pct_per_hour", 0.0)
+        if not isinstance(charging_rate, (int, float)):
+            charging_rate = 0.0
+
+        # Parse target SOC with validation
+        target_soc = data.get("target_soc", 100.0)
+        if not isinstance(target_soc, (int, float)) or target_soc <= 0:
+            target_soc = 100.0
+
         return cls(
-            last_actual_soc=data.get("last_actual_soc"),
-            last_actual_soc_time=(
-                datetime.fromisoformat(last_time) if last_time else None
-            ),
-            is_charging=data.get("is_charging", False),
-            is_idle=data.get("is_idle", False),
-            charging_rate_pct_per_hour=data.get("charging_rate_pct_per_hour", 0.0),
-            idle_drain_rate_pct_per_hour=data.get(
-                "idle_drain_rate_pct_per_hour", DEFAULT_IDLE_DRAIN_RATE
-            ),
-            learned_correction_factor=correction,
-            target_soc=data.get("target_soc", 100.0),
+            last_actual_soc=float(last_soc) if last_soc is not None else None,
+            last_actual_soc_time=last_time_parsed,
+            is_charging=bool(data.get("is_charging", False)),
+            is_idle=bool(data.get("is_idle", False)),
+            charging_rate_pct_per_hour=float(charging_rate),
+            idle_drain_rate_pct_per_hour=float(drain_rate),
+            learned_correction_factor=float(correction),
+            target_soc=float(target_soc),
         )
 
 
@@ -204,8 +237,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         self._attr_icon = "mdi:battery-sync"
 
         self._state = SocEstimationState()
-        self._unsub_timer: callable | None = None
-        self._unsub_deep_refresh: callable | None = None
+        self._unsub_timer: Callable[[], None] | None = None
+        self._unsub_deep_refresh: Callable[[], None] | None = None
         self._deep_refresh_hour: int = random.randint(
             DEEP_REFRESH_HOUR_START, DEEP_REFRESH_HOUR_END
         )
