@@ -1,6 +1,7 @@
-"""Buttones for Uconnect integration."""
+"""Buttons for Uconnect integration."""
 
 from __future__ import annotations
+from dataclasses import dataclass
 from typing import Final, Callable
 
 import logging
