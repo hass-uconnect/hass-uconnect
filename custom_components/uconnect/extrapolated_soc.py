@@ -327,22 +327,24 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 )
                 soc_changed = False
 
-            if soc_changed:
-                # Learn correction factor from actual vs predicted changes
-                self._learn_correction_factor(current_soc, now)
-                # Learn drain rate from actual vs predicted changes when idle
-                self._learn_drain_rate(current_soc, now)
-
-                # Update state with actual values
-                self._state.last_actual_soc = current_soc
-                self._state.last_actual_soc_time = now
-                self._state.last_estimated_soc = current_soc
-
-        # Update charging state
+        # Update charging and idle state BEFORE learning
+        # (learning functions need current state, not previous)
+        was_charging = self._state.is_charging
+        was_idle = self._state.is_idle
         self._state.is_charging = is_charging
-
-        # Update idle state (not charging and ignition off)
         self._state.is_idle = not is_charging and not ignition_on
+
+        if current_soc is not None and soc_changed:
+            # Learn correction factor from actual vs predicted changes
+            # Use previous state to compare what we predicted vs what happened
+            self._learn_correction_factor(current_soc, now, was_charging)
+            # Learn drain rate from actual vs predicted changes when idle
+            self._learn_drain_rate(current_soc, now, was_idle)
+
+            # Update state with actual values
+            self._state.last_actual_soc = current_soc
+            self._state.last_actual_soc_time = now
+            self._state.last_estimated_soc = current_soc
 
         # Calculate charging rate if charging with valid data
         if is_charging and current_soc is not None and time_to_full is not None:
@@ -395,6 +397,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         self,
         current_soc: float,
         now: datetime,
+        was_charging: bool,
     ) -> None:
         """Learn a correction factor by comparing actual vs predicted SOC changes.
 
@@ -404,7 +407,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if (
             self._state.last_actual_soc is None
             or self._state.last_actual_soc_time is None
-            or not self._state.is_charging
+            or not was_charging
             or self._state.charging_rate_pct_per_hour <= 0
         ):
             return
@@ -457,6 +460,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         self,
         current_soc: float,
         now: datetime,
+        was_idle: bool,
     ) -> None:
         """Learn idle drain rate by comparing actual vs predicted SOC changes.
 
@@ -466,7 +470,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if (
             self._state.last_actual_soc is None
             or self._state.last_actual_soc_time is None
-            or not self._state.is_idle
+            or not was_idle
         ):
             return
 
@@ -642,11 +646,14 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         if current_soc is None:
             return None
 
+        charging_level = getattr(self.vehicle, "charging_level", None)
         time_to_full_l2 = getattr(self.vehicle, "time_to_fully_charge_l2", None)
         time_to_full_l3 = getattr(self.vehicle, "time_to_fully_charge_l3", None)
 
-        # Select the appropriate time-to-full (prefer smaller non-zero value)
-        time_to_full = self._select_time_to_full(time_to_full_l2, time_to_full_l3)
+        # Select the appropriate time-to-full based on charging_level
+        time_to_full = self._select_time_to_full(
+            charging_level, time_to_full_l2, time_to_full_l3
+        )
 
         if time_to_full is None:
             return None
@@ -656,13 +663,25 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
 
     def _select_time_to_full(
         self,
+        charging_level: str | int | None,
         time_l2: float | None,
         time_l3: float | None,
     ) -> float | None:
-        """Select the appropriate time-to-full value."""
+        """Select the appropriate time-to-full value based on charging_level."""
         valid_l2 = time_l2 is not None and time_l2 > 0
         valid_l3 = time_l3 is not None and time_l3 > 0
 
+        # Use charging_level to select the right time-to-full
+        if charging_level is not None:
+            level_str = str(charging_level).upper()
+            if "3" in level_str or "DC" in level_str or "FAST" in level_str:
+                if valid_l3:
+                    return time_l3
+            elif "2" in level_str or "AC" in level_str:
+                if valid_l2:
+                    return time_l2
+
+        # Fallback: use whichever is available
         if valid_l2 and valid_l3:
             return min(time_l2, time_l3)
         elif valid_l3:
