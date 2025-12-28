@@ -284,13 +284,14 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         current_soc = getattr(self.vehicle, "state_of_charge", None)
         is_charging = getattr(self.vehicle, "charging", False) or False
         ignition_on = getattr(self.vehicle, "ignition_on", False) or False
+        charging_level = getattr(self.vehicle, "charging_level", None)
         time_to_full_l2 = getattr(self.vehicle, "time_to_fully_charge_l2", None)
         time_to_full_l3 = getattr(self.vehicle, "time_to_fully_charge_l3", None)
 
-        # Select the appropriate time-to-full value
-        # Prefer the one that's actively being used (non-zero and smaller usually
-        # indicates active charging on that level)
-        time_to_full = self._select_time_to_full(time_to_full_l2, time_to_full_l3)
+        # Select the appropriate time-to-full based on charging_level sensor
+        time_to_full = self._select_time_to_full(
+            charging_level, time_to_full_l2, time_to_full_l3
+        )
 
         now = datetime.now(timezone.utc)
 
@@ -356,17 +357,29 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
     def _select_time_to_full(
         self,
+        charging_level: str | None,
         time_l2: float | None,
         time_l3: float | None,
     ) -> float | None:
-        """Select the appropriate time-to-full value.
+        """Select the appropriate time-to-full value based on charging_level.
 
-        When both L2 and L3 times are available, prefer the smaller non-zero
-        value as it likely indicates the active charging level.
+        Uses the charging_level sensor to determine which charger is connected,
+        falling back to heuristics if not available.
         """
         valid_l2 = time_l2 is not None and time_l2 > 0
         valid_l3 = time_l3 is not None and time_l3 > 0
 
+        # Use charging_level to select the right time-to-full
+        if charging_level is not None:
+            level_upper = charging_level.upper()
+            if "3" in level_upper or "DC" in level_upper or "FAST" in level_upper:
+                if valid_l3:
+                    return time_l3
+            elif "2" in level_upper or "AC" in level_upper:
+                if valid_l2:
+                    return time_l2
+
+        # Fallback: use whichever is available
         if valid_l2 and valid_l3:
             # Both available - use the smaller one (likely the active charger)
             return min(time_l2, time_l3)
