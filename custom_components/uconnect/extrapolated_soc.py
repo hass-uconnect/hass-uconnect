@@ -286,13 +286,11 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         Only refreshes if the car hasn't been powered on in the last 24 hours,
         since driving would provide fresh data anyway.
         """
-        if self._state.last_actual_soc_time is None:
-            return
-
         now = datetime.now(timezone.utc)
-        hours_since_update = (
-            now - self._state.last_actual_soc_time
-        ).total_seconds() / 3600.0
+        hours_since_update = self._get_elapsed_hours(now)
+
+        if hours_since_update is None:
+            return
 
         if hours_since_update < 24.0:
             _LOGGER.debug(
@@ -410,18 +408,15 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         """
         if (
             self._state.last_actual_soc is None
-            or self._state.last_actual_soc_time is None
             or not was_charging
             or self._state.charging_rate_pct_per_hour <= 0
         ):
             return
 
-        elapsed_hours = (
-            now - self._state.last_actual_soc_time
-        ).total_seconds() / 3600.0
+        elapsed_hours = self._get_elapsed_hours(now)
 
         # Guard against clock drift (NTP adjustments, etc.)
-        if elapsed_hours < MIN_TIME_FOR_LEARNING_HOURS:
+        if elapsed_hours is None or elapsed_hours < MIN_TIME_FOR_LEARNING_HOURS:
             return
 
         actual_change = current_soc - self._state.last_actual_soc
@@ -471,19 +466,13 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         This helps estimate battery drain when the vehicle is idle (not charging,
         ignition off).
         """
-        if (
-            self._state.last_actual_soc is None
-            or self._state.last_actual_soc_time is None
-            or not was_idle
-        ):
+        if self._state.last_actual_soc is None or not was_idle:
             return
 
-        elapsed_hours = (
-            now - self._state.last_actual_soc_time
-        ).total_seconds() / 3600.0
+        elapsed_hours = self._get_elapsed_hours(now)
 
         # Need sufficient idle time to learn drain rate accurately
-        if elapsed_hours < MIN_IDLE_TIME_FOR_LEARNING_HOURS:
+        if elapsed_hours is None or elapsed_hours < MIN_IDLE_TIME_FOR_LEARNING_HOURS:
             return
 
         actual_change = self._state.last_actual_soc - current_soc  # Drain is positive
@@ -521,6 +510,15 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         # Available if we have received at least one SOC reading
         return self._state.last_actual_soc is not None
 
+    def _get_elapsed_hours(self, now: datetime) -> float | None:
+        """Get hours elapsed since last actual SOC update.
+
+        Returns None if no previous update time is available.
+        """
+        if self._state.last_actual_soc_time is None:
+            return None
+        return (now - self._state.last_actual_soc_time).total_seconds() / 3600.0
+
     def _get_current_vehicle_soc(self) -> float | None:
         """Get current SOC from vehicle, with fallback to stored state."""
         current_soc = getattr(self.vehicle, "state_of_charge", None)
@@ -537,17 +535,11 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_vehicle_soc is None:
             return None
 
-        # For extrapolation, we need the stored timestamp
-        if self._state.last_actual_soc_time is None:
-            return current_vehicle_soc
-
         now = datetime.now(timezone.utc)
-        elapsed_hours = (
-            now - self._state.last_actual_soc_time
-        ).total_seconds() / 3600.0
+        elapsed_hours = self._get_elapsed_hours(now)
 
-        # Guard against negative elapsed time (clock drift, NTP adjustments)
-        if elapsed_hours < 0:
+        # Guard against missing timestamp or negative elapsed time (clock drift)
+        if elapsed_hours is None or elapsed_hours < 0:
             return current_vehicle_soc
 
         # Check for staleness - return fresh vehicle SOC if too old
