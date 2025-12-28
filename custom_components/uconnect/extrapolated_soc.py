@@ -46,9 +46,9 @@ MIN_TIME_FOR_LEARNING_HOURS = 0.05  # Minimum 3 minutes for learning
 MIN_SOC_CHANGE_FOR_LEARNING = 0.5  # Minimum 0.5% SOC change for learning
 
 # Constants for idle drain estimation
-DEFAULT_IDLE_DRAIN_RATE = 0.04  # Default 0.04%/hour ≈ 1%/day
+DEFAULT_IDLE_DRAIN_RATE = 0.006  # Default 0.006%/hour ≈ 1%/week ≈ 4%/month
 MIN_IDLE_DRAIN_RATE = 0.0  # Minimum drain rate
-MAX_IDLE_DRAIN_RATE = 0.5  # Maximum drain rate (0.5%/hour ≈ 12%/day)
+MAX_IDLE_DRAIN_RATE = 0.04  # Maximum drain rate (0.04%/hour ≈ 1%/day)
 MIN_IDLE_TIME_FOR_LEARNING_HOURS = 1.0  # Minimum 1 hour idle for learning drain rate
 IDLE_DRAIN_EMA_ALPHA = 0.2  # Slower learning for drain rate (less frequent data points)
 
