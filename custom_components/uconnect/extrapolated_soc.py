@@ -327,21 +327,25 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 )
                 soc_changed = False
 
-        # Update charging and idle state BEFORE learning
-        # (learning functions need current state, not previous)
+        # Save previous state for learning
         was_charging = self._state.is_charging
         was_idle = self._state.is_idle
+
+        # Update charging and idle state
         self._state.is_charging = is_charging
         self._state.is_idle = not is_charging and not ignition_on
 
-        if current_soc is not None and soc_changed:
-            # Learn correction factor from actual vs predicted changes
-            # Use previous state to compare what we predicted vs what happened
-            self._learn_correction_factor(current_soc, now, was_charging)
-            # Learn drain rate from actual vs predicted changes when idle
-            self._learn_drain_rate(current_soc, now, was_idle)
+        # Always try to learn from SOC changes, even if we don't update baseline
+        # This ensures deep refresh data is used for learning drain rate
+        if current_soc is not None and self._state.last_actual_soc is not None:
+            if current_soc != self._state.last_actual_soc:
+                # Learn correction factor from actual vs predicted changes
+                self._learn_correction_factor(current_soc, now, was_charging)
+                # Learn drain rate from actual vs predicted changes when idle
+                self._learn_drain_rate(current_soc, now, was_idle)
 
-            # Update state with actual values
+        # Only update baseline if soc_changed (respects skip logic above)
+        if current_soc is not None and soc_changed:
             self._state.last_actual_soc = current_soc
             self._state.last_actual_soc_time = now
             self._state.last_estimated_soc = current_soc
