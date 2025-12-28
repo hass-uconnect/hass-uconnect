@@ -7,7 +7,8 @@ Connect your Uconnect-enabled vehicle to Home Assistant. This integration has be
 US, Canada, EU & Asia regions are supported. Try a different region if the originally selected region does not authenticate.
 
 - Jeep: Works ✅ 
-- Fiat: Works ✅ 
+- Fiat: Works ✅
+- Abarth: Works ✅ 
 - Ram: Works ✅ 
 - Dodge: Unknown ❔
 - Alfa Romeo: Works ✅ 
