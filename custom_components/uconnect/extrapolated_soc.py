@@ -18,7 +18,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.helpers.event import (
     async_track_time_change,
     async_track_time_interval,
@@ -63,7 +63,6 @@ class SocEstimationState:
 
     last_actual_soc: float | None = None
     last_actual_soc_time: datetime | None = None
-    last_estimated_soc: float | None = None
     is_charging: bool = False
     is_idle: bool = False  # Not charging and ignition off
     charging_rate_pct_per_hour: float = 0.0
@@ -80,7 +79,6 @@ class SocEstimationState:
                 if self.last_actual_soc_time
                 else None
             ),
-            "last_estimated_soc": self.last_estimated_soc,
             "is_charging": self.is_charging,
             "is_idle": self.is_idle,
             "charging_rate_pct_per_hour": self.charging_rate_pct_per_hour,
@@ -103,7 +101,6 @@ class SocEstimationState:
             last_actual_soc_time=(
                 datetime.fromisoformat(last_time) if last_time else None
             ),
-            last_estimated_soc=data.get("last_estimated_soc"),
             is_charging=data.get("is_charging", False),
             is_idle=data.get("is_idle", False),
             charging_rate_pct_per_hour=data.get("charging_rate_pct_per_hour", 0.0),
@@ -381,7 +378,6 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_soc is not None and soc_changed:
             self._state.last_actual_soc = current_soc
             self._state.last_actual_soc_time = now
-            self._state.last_estimated_soc = current_soc
 
         # Calculate charging rate if charging with valid data
         if is_charging and current_soc is not None and time_to_full is not None:
@@ -542,20 +538,11 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if elapsed_hours is None or elapsed_hours < 0:
             return current_vehicle_soc
 
-        # Check for staleness - return fresh vehicle SOC if too old
-        if elapsed_hours > STALE_THRESHOLD_HOURS:
-            _LOGGER.debug(
-                "SOC estimate stale for %s (%.1f hours), returning vehicle SOC",
-                self.vehicle.vin,
-                elapsed_hours,
-            )
-            return current_vehicle_soc
-
         base_soc = self._state.last_actual_soc
         if base_soc is None:
             return current_vehicle_soc
 
-        # Handle idle drain extrapolation
+        # Handle idle drain extrapolation (no staleness limit - continue until deep refresh)
         if self._state.is_idle and self._state.idle_drain_rate_pct_per_hour > 0:
             extrapolated = base_soc - (
                 self._state.idle_drain_rate_pct_per_hour * elapsed_hours
@@ -563,6 +550,15 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             # Clamp to valid range (don't go below 0)
             extrapolated = max(0.0, extrapolated)
             return round(extrapolated, 1)
+
+        # Check for staleness - only for charging extrapolation
+        if elapsed_hours > STALE_THRESHOLD_HOURS:
+            _LOGGER.debug(
+                "SOC estimate stale for %s (%.1f hours), returning vehicle SOC",
+                self.vehicle.vin,
+                elapsed_hours,
+            )
+            return current_vehicle_soc
 
         # If not charging (and not idle), return fresh vehicle SOC
         if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
@@ -605,10 +601,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             "correction_factor": round(self._state.learned_correction_factor, 2),
             "target_soc": self._state.target_soc,
         }
-        # Include estimation state for restore, but compute fresh estimated SOC
-        state_dict = self._state.to_dict()
-        state_dict["last_estimated_soc"] = self.native_value
-        attrs["estimation_state"] = state_dict
+        # Include estimation state for restore
+        attrs["estimation_state"] = self._state.to_dict()
         return attrs
 
 
