@@ -128,9 +128,9 @@ class SocEstimationState:
         if not isinstance(charging_rate, (int, float)):
             charging_rate = 0.0
 
-        # Parse target SOC with validation
+        # Parse target SOC with validation (must be between 0 and 100)
         target_soc = data.get("target_soc", 100.0)
-        if not isinstance(target_soc, (int, float)) or target_soc <= 0:
+        if not isinstance(target_soc, (int, float)) or target_soc <= 0 or target_soc > 100:
             target_soc = 100.0
 
         return cls(
