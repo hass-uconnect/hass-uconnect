@@ -3,6 +3,7 @@ from typing import cast
 from homeassistant.const import ATTR_DEVICE_ID
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import ServiceCall, callback, HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry
 
 from py_uconnect.command import *
@@ -90,8 +91,11 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
 
         if call.service != SERVICE_UPDATE:
             cmd = SERVICES_COMMANDS[call.service]
-            if not cmd.name in coordinator.client.vehicles[vin].supported_commands:
-                raise Exception(f"Service {call.service} is not supported by this car")
+            vehicle = coordinator.client.vehicles.get(vin)
+            if vehicle is None:
+                raise HomeAssistantError(f"Vehicle {vin} not found")
+            if cmd.name not in vehicle.supported_commands:
+                raise HomeAssistantError(f"Service {call.service} is not supported by this vehicle")
 
             await coordinator.async_command(vin, cmd)
         else:
