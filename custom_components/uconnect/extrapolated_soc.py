@@ -200,7 +200,8 @@ def calculate_charging_rate(
     charge time, which naturally decreases as SOC increases (since more of
     the remaining time is in the slower taper phase above 80%).
     """
-    if time_to_full_minutes is None or time_to_full_minutes <= 0:
+    # Require at least 1 minute to avoid unrealistic rates from tiny values
+    if time_to_full_minutes is None or time_to_full_minutes < 1.0:
         return 0.0
 
     remaining_soc = 100.0 - current_soc
@@ -211,7 +212,10 @@ def calculate_charging_rate(
 
     # Simple average rate: remaining SOC divided by time to reach 100%
     # The vehicle's time-to-full already accounts for taper behavior
-    return remaining_soc / time_to_full_hours
+    rate = remaining_soc / time_to_full_hours
+
+    # Cap at 300%/hour (realistic max for fastest DC charging)
+    return min(rate, 300.0)
 
 
 class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity):
