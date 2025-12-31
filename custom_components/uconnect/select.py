@@ -1,11 +1,15 @@
 """Select for Uconnect integration."""
 
 from __future__ import annotations
+import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+_LOGGER = logging.getLogger(__name__)
 
 from py_uconnect.client import Vehicle
 from py_uconnect.api import (
@@ -69,7 +73,9 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
 
     @property
     def icon(self):
-        return ICONS[self.vehicle.charging_level_preference]
+        return ICONS.get(
+            self.vehicle.charging_level_preference, "mdi:battery-charging"
+        )
 
     @property
     def options(self):
@@ -80,4 +86,10 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
         return self.vehicle.charging_level_preference
 
     async def async_select_option(self, option: str) -> None:
-        await self.coordinator.async_set_charging_level(self.vehicle.vin, option)
+        try:
+            await self.coordinator.async_set_charging_level(self.vehicle.vin, option)
+        except Exception as err:
+            _LOGGER.error(
+                "Failed to set charging level to %s: %s", option, err
+            )
+            raise HomeAssistantError(f"Failed to set charging level: {err}") from err
