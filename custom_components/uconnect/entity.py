@@ -20,7 +20,14 @@ class UconnectEntity(CoordinatorEntity):
     @property
     def vehicle(self) -> Vehicle:
         """Get the current vehicle object from the coordinator."""
-        return self.coordinator.client.get_vehicles()[self._vin]
+        vehicles = self.coordinator.client.get_vehicles()
+        vehicle = vehicles.get(self._vin)
+        if vehicle is None:
+            raise KeyError(
+                f"Vehicle {self._vin} not found in coordinator data. "
+                "Vehicle may have been removed from account."
+            )
+        return vehicle
 
     @property
     def device_info(self):
