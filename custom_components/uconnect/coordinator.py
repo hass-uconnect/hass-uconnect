@@ -66,8 +66,15 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
 
         try:
             await self.hass.async_add_executor_job(self.client.refresh)
-        except Exception:
-            _LOGGER.exception("Update failed, falling back to cached data")
+        except Exception as err:
+            # On first run (no cached data), re-raise to signal setup failure
+            if self.data is None:
+                _LOGGER.error("Initial data fetch failed: %s", err)
+                raise
+            # On subsequent runs, log and fall back to cached data
+            _LOGGER.warning(
+                "Update failed, falling back to cached data: %s", err
+            )
 
         return self.data
 

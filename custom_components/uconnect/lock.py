@@ -1,13 +1,17 @@
 """Lock for Uconnect integration."""
 
 from __future__ import annotations
+import logging
 from dataclasses import dataclass
 from typing import Callable, Final
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.lock import LockEntity, LockEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+_LOGGER = logging.getLogger(__name__)
 
 from py_uconnect.client import Vehicle
 from py_uconnect.command import *
@@ -96,11 +100,19 @@ class UconnectLock(LockEntity, UconnectEntity):
         return self.entity_description.is_locked(self.vehicle)
 
     async def async_lock(self, **kwargs):
-        await self.coordinator.async_command(
-            self.vehicle.vin, self.entity_description.command_on
-        )
+        try:
+            await self.coordinator.async_command(
+                self.vehicle.vin, self.entity_description.command_on
+            )
+        except Exception as err:
+            _LOGGER.error("Failed to lock %s: %s", self.vehicle.vin, err)
+            raise HomeAssistantError(f"Failed to lock: {err}") from err
 
     async def async_unlock(self, **kwargs):
-        await self.coordinator.async_command(
-            self.vehicle.vin, self.entity_description.command_off
-        )
+        try:
+            await self.coordinator.async_command(
+                self.vehicle.vin, self.entity_description.command_off
+            )
+        except Exception as err:
+            _LOGGER.error("Failed to unlock %s: %s", self.vehicle.vin, err)
+            raise HomeAssistantError(f"Failed to unlock: {err}") from err

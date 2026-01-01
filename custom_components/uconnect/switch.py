@@ -8,12 +8,15 @@ import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.switch import (
     SwitchDeviceClass,
     SwitchEntityDescription,
     SwitchEntity,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 from py_uconnect.client import Vehicle
 from py_uconnect.command import *
@@ -163,14 +166,22 @@ class UconnectSwitch(SwitchEntity, UconnectEntity):
         if self.entity_description.command_on is None:
             return
 
-        await self.coordinator.async_command(
-            self.vehicle.vin, self.entity_description.command_on
-        )
+        try:
+            await self.coordinator.async_command(
+                self.vehicle.vin, self.entity_description.command_on
+            )
+        except Exception as err:
+            _LOGGER.error("Failed to turn on %s: %s", self.entity_description.key, err)
+            raise HomeAssistantError(f"Failed to turn on: {err}") from err
 
     async def async_turn_off(self, **kwargs):
         if self.entity_description.command_off is None:
             return
 
-        await self.coordinator.async_command(
-            self.vehicle.vin, self.entity_description.command_off
-        )
+        try:
+            await self.coordinator.async_command(
+                self.vehicle.vin, self.entity_description.command_off
+            )
+        except Exception as err:
+            _LOGGER.error("Failed to turn off %s: %s", self.entity_description.key, err)
+            raise HomeAssistantError(f"Failed to turn off: {err}") from err
