@@ -96,8 +96,8 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     UconnectSwitchEntityDescription(
         key="switch_trunk",
         name="Lock Trunk",
-        on_icon="mdi:car-back",
-        off_icon="mdi:car-back",
+        on_icon="mdi:lock",
+        off_icon="mdi:lock-open",
         command_on=COMMAND_TRUNK_LOCK,
         command_off=COMMAND_TRUNK_UNLOCK,
         device_class=SwitchDeviceClass.SWITCH,
@@ -164,7 +164,9 @@ class UconnectSwitch(SwitchEntity, UconnectEntity):
 
     async def async_turn_on(self, **kwargs):
         if self.entity_description.command_on is None:
-            return
+            raise HomeAssistantError(
+                f"{self.entity_description.name} cannot be turned on"
+            )
 
         try:
             await self.coordinator.async_command(
@@ -176,7 +178,9 @@ class UconnectSwitch(SwitchEntity, UconnectEntity):
 
     async def async_turn_off(self, **kwargs):
         if self.entity_description.command_off is None:
-            return
+            raise HomeAssistantError(
+                f"{self.entity_description.name} cannot be turned off"
+            )
 
         try:
             await self.coordinator.async_command(
