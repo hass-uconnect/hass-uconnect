@@ -96,8 +96,8 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     UconnectSwitchEntityDescription(
         key="switch_trunk",
         name="Lock Trunk",
-        on_icon="mdi:car-back",
-        off_icon="mdi:car-back",
+        on_icon="mdi:lock",
+        off_icon="mdi:lock-open",
         command_on=COMMAND_TRUNK_LOCK,
         command_off=COMMAND_TRUNK_UNLOCK,
         device_class=SwitchDeviceClass.SWITCH,
