@@ -24,7 +24,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 - Home Assistant
 - [HACS](https://www.hacs.xyz) (Home Assistant Community Store) 
-- A vehicle using Uconnect cellular services, **vehicles that use SiriusXM Guardian are not supported**
+- A vehicle using Uconnect cellular services, **vehicles that use [SiriusXM Guardian](https://www.driveuconnect.com/sirius-xm-guardian/siriusxm-guardian-modal.html) are not supported**
 - Check the links below:
   - Fiat: https://connect.fiat.com
   - Jeep: https://connect.jeep.com
