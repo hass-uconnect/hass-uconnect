@@ -37,7 +37,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 ## Features ✔️
 
 - Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲ etc. into Home Assistant
-- Multiple Brands: Fiat, Jeep, Ram, Dodge, Alfa Romeo, Chrysler & Maserati
+- Multiple Brands: Fiat, Jeep, Ram, Dodge, Alfa Romeo, Chrysler, Abarth & Maserati
 - Multiple Regions: America, Canada, Europe & Asia
 - Supports multiple cars on the same account 🚙🚗🚕
 - Location tracking 🌍
