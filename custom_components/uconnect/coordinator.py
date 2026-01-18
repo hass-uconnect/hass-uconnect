@@ -39,18 +39,27 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize the coordinator."""
         self.platforms: set[str] = set()
 
+        # Try to get PIN from the options object,
+        # if it's empty there - then from the data object
+        if config_entry.options.get(CONF_PIN) != "":
+            pin = config_entry.options.get(CONF_PIN)
+        else:
+            pin = config_entry.data.get(CONF_PIN)
+
         self.client = Client(
             email=config_entry.data.get(CONF_USERNAME),
             password=config_entry.data.get(CONF_PASSWORD),
-            pin=config_entry.data.get(CONF_PIN),
-            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(CONF_BRAND_REGION)]],
+            pin=pin,
+            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(
+                CONF_BRAND_REGION)]],
             disable_tls_verification=config_entry.data.get(
                 CONF_DISABLE_TLS_VERIFICATION
             ),
         )
 
         self.refresh_interval: int = (
-            config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
+            config_entry.options.get(
+                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
         )
 
         super().__init__(
@@ -104,6 +113,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def update_options(self, hass: HomeAssistant, config_entry: ConfigEntry):
         self.update_interval = timedelta(
-            seconds=config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            seconds=config_entry.options.get(
+                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             * 60
         )

@@ -51,6 +51,7 @@ OPTIONS_SCHEMA = vol.Schema(
             CONF_SCAN_INTERVAL,
             default=DEFAULT_SCAN_INTERVAL,
         ): vol.All(vol.Coerce(int), vol.Range(min=1, max=999)),
+        vol.Optional(CONF_PIN, default=DEFAULT_PIN): str,
         vol.Required(CONF_ADD_COMMAND_ENTITIES): bool,
     }
 )
@@ -88,7 +89,6 @@ class UconnectOptionFlowHandler(config_entries.OptionsFlow):
             )
 
         return self.async_show_form(
-            step_id="init",
             data_schema=self.add_suggested_values_to_schema(
                 OPTIONS_SCHEMA, self.config_entry.options
             ),
@@ -114,7 +114,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is None:
             return self.async_show_form(
-                step_id="user", data_schema=STEP_USER_DATA_SCHEMA
+                data_schema=STEP_USER_DATA_SCHEMA
             )
 
         errors = {}
