@@ -41,8 +41,10 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Try to get PIN from the options object,
         # if it's empty there - then from the data object
-        if config_entry.options.get(CONF_PIN) != "":
-            pin = config_entry.options.get(CONF_PIN)
+        pin_options = config_entry.options.get(CONF_PIN)
+
+        if pin_options is not None and pin_options != "":
+            pin = pin_options
         else:
             pin = config_entry.data.get(CONF_PIN)
 
