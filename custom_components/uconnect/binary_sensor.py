@@ -169,7 +169,7 @@ async def async_setup_entry(
 
     for vehicle in coordinator.client.vehicles.values():
         for description in SENSOR_DESCRIPTIONS:
-            if getattr(vehicle, description.key) is not None:
+            if getattr(vehicle, description.key, None) is not None:
                 entities.append(UconnectBinarySensor(coordinator, description, vehicle))
 
     async_add_entities(entities)
