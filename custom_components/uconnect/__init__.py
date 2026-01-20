@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
+from .const import DOMAIN
 from .coordinator import UconnectDataUpdateCoordinator
 from .services import async_setup_services, async_unload_services
 

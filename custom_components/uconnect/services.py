@@ -1,5 +1,3 @@
-from typing import cast
-
 from homeassistant.const import ATTR_DEVICE_ID
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import ServiceCall, callback, HomeAssistant
@@ -174,4 +172,6 @@ def _get_coordinator_from_device(
         raise ValueError(f"No config entry found for device: {call.data.get(ATTR_DEVICE_ID)}")
 
     config_entry = hass.config_entries.async_get_entry(config_entry_id)
+    if config_entry is None:
+        raise ValueError(f"Config entry not found: {config_entry_id}")
     return hass.data[DOMAIN][config_entry.unique_id]
