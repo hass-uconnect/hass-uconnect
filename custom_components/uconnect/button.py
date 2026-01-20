@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Final, Callable
-
-import logging
+from typing import Final
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry

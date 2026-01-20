@@ -1,5 +1,3 @@
-from typing import cast
-
 from homeassistant.const import ATTR_DEVICE_ID
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import ServiceCall, callback, HomeAssistant
