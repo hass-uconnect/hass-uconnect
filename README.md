@@ -6,14 +6,14 @@ Connect your Uconnect-enabled vehicle to Home Assistant. This integration has be
 
 US, Canada, EU & Asia regions are supported. Try a different region if the originally selected region does not authenticate.
 
-- Jeep: Works ✅ 
-- Fiat: Works ✅
-- Abarth: Works ✅ 
-- Ram: Works ✅ 
-- Dodge: Unknown ❔
-- Alfa Romeo: Works ✅ 
+- Abarth: Works ✅
+- Alfa Romeo: Works ✅
 - Chrysler: Unknown ❔
+- Dodge: Unknown ❔
+- Fiat: Works ✅
+- Jeep: Works ✅
 - Maserati: Unknown ❔
+- Ram: Works ✅
 
 ## Tested Vehicles
 
@@ -26,18 +26,18 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - [HACS](https://www.hacs.xyz) (Home Assistant Community Store) 
 - A vehicle using Uconnect cellular services, **vehicles that use [SiriusXM Guardian](https://www.driveuconnect.com/sirius-xm-guardian/siriusxm-guardian-modal.html) are not supported**
 - Check the links below:
+  - Alfa Romeo: https://connect.alfaromeo.com
+  - Chrysler: https://connect.chrysler.com
+  - Dodge: https://connect.dodge.com
   - Fiat: https://connect.fiat.com
   - Jeep: https://connect.jeep.com
-  - Ram: https://connect.ramtrucks.com
-  - Dodge: https://connect.dodge.com
-  - AlfaRomeo: https://connect.alfaromeo.com
-  - Chrysler: https://connect.chrysler.com
   - Maserati: https://connect.maserati.com
+  - Ram: https://connect.ramtrucks.com
 
 ## Features ✔️
 
 - Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲ etc. into Home Assistant
-- Multiple Brands: Fiat, Jeep, Ram, Dodge, Alfa Romeo, Chrysler, Abarth & Maserati
+- Multiple Brands: Abarth, Alfa Romeo, Chrysler, Dodge, Fiat, Jeep, Maserati & Ram
 - Multiple Regions: America, Canada, Europe & Asia
 - Supports multiple cars on the same account 🚙🚗🚕
 - Location tracking 🌍
