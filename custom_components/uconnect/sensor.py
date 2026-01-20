@@ -186,7 +186,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         key="last_location_update",
         name="Last Location Update At",
         icon="mdi:update",
-        get=lambda x: x.location.updated,
+        get=lambda x: x.location.updated if x.location else None,
         device_class=SensorDeviceClass.TIMESTAMP,
     ),
 )
