@@ -372,9 +372,11 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
             # Only update SOC when charging/driving and new value exceeds extrapolated
             # When idle (parked), car data is stale and shouldn't reset extrapolation
+            # Use self._state.is_idle (previous state) to allow fresh data when
+            # transitioning from driving to idle
             current_extrapolated = self.native_value
             is_idle = not is_charging and not ignition_on
-            if soc_changed and is_idle:
+            if soc_changed and self._state.is_idle:
                 _LOGGER.debug(
                     "Skipping SOC update for %s: car is idle, data is stale",
                     self.vehicle.vin,
