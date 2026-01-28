@@ -362,6 +362,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         now = datetime.now(timezone.utc)
 
+        # Track if we're skipping due to stale charging data
+        skip_stale_charging_data = False
+
         if current_soc is not None:
             # Only update baseline if SOC actually changed
             # This preserves extrapolation continuity across HA restarts
@@ -384,29 +387,38 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 soc_changed = False
             elif (
                 soc_changed
-                and is_charging
+                and self._state.is_charging  # Check if we WERE charging
                 and current_extrapolated is not None
                 and current_soc < current_extrapolated
             ):
+                # Vehicle reports lower SOC than extrapolated while we were charging
+                # This is stale data - skip the entire update including state changes
                 _LOGGER.debug(
-                    "Skipping SOC update for %s: car reports %.1f%% but extrapolated is %.1f%%",
+                    "Skipping stale charging data for %s: car reports %.1f%% but extrapolated is %.1f%%",
                     self.vehicle.vin,
                     current_soc,
                     current_extrapolated,
                 )
                 soc_changed = False
+                skip_stale_charging_data = True
 
         # Save previous state for learning
         was_charging = self._state.is_charging
         was_idle = self._state.is_idle
 
-        # Update charging and idle state
-        self._state.is_charging = is_charging
-        self._state.is_idle = not is_charging and not ignition_on
+        # Update charging and idle state (unless we detected stale charging data)
+        if not skip_stale_charging_data:
+            self._state.is_charging = is_charging
+            self._state.is_idle = not is_charging and not ignition_on
 
         # Always try to learn from SOC changes, even if we don't update baseline
         # This ensures deep refresh data is used for learning drain rate
-        if current_soc is not None and self._state.last_actual_soc is not None:
+        # But skip learning from stale data
+        if (
+            current_soc is not None
+            and self._state.last_actual_soc is not None
+            and not skip_stale_charging_data
+        ):
             if current_soc != self._state.last_actual_soc:
                 # Learn correction factor from actual vs predicted changes
                 self._learn_correction_factor(current_soc, now, was_charging)
@@ -419,13 +431,15 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             self._state.last_actual_soc_time = now
 
         # Calculate charging rate if charging with valid data
-        if is_charging and current_soc is not None and time_to_full is not None:
-            self._state.charging_rate_pct_per_hour = calculate_charging_rate(
-                current_soc, time_to_full
-            )
-        else:
-            # Zero rate when not charging OR when missing required data
-            self._state.charging_rate_pct_per_hour = 0.0
+        # Don't recalculate if we detected stale charging data
+        if not skip_stale_charging_data:
+            if is_charging and current_soc is not None and time_to_full is not None:
+                self._state.charging_rate_pct_per_hour = calculate_charging_rate(
+                    current_soc, time_to_full
+                )
+            else:
+                # Zero rate when not charging OR when missing required data
+                self._state.charging_rate_pct_per_hour = 0.0
 
         # Default target SOC to 100% (no target SOC limit for this vehicle type)
         self._state.target_soc = 100.0
