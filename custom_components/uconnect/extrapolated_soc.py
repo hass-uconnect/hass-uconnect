@@ -379,6 +379,25 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             # (idle→driving or driving→idle) means fresh data
             current_extrapolated = self.native_value
             is_idle = not is_charging and not ignition_on
+
+            # Physical constraint: SOC cannot drop while actively charging
+            # This catches stale data even when extrapolation fails (e.g., after HA restart)
+            if (
+                soc_changed
+                and is_charging  # Currently charging
+                and self._state.last_actual_soc is not None
+                and current_soc < self._state.last_actual_soc
+            ):
+                _LOGGER.debug(
+                    "Rejecting SOC drop during charging for %s: "
+                    "reported %.1f%% but last known was %.1f%%",
+                    self.vehicle.vin,
+                    current_soc,
+                    self._state.last_actual_soc,
+                )
+                soc_changed = False
+                skip_stale_charging_data = True
+
             if soc_changed and self._state.is_idle and is_idle:
                 _LOGGER.debug(
                     "Skipping SOC update for %s: car is idle, data is stale",
