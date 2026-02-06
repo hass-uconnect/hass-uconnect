@@ -436,7 +436,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         was_idle = self._state.is_idle
 
         # Update charging and idle state (unless we detected stale charging data)
-        if not skip_stale_charging_data:
+        # Skip when current_soc is None to preserve restored state after reboot
+        if current_soc is not None and not skip_stale_charging_data:
             self._state.is_charging = is_charging
             self._state.is_idle = not is_charging and not ignition_on
 
@@ -461,8 +462,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         # Calculate charging rate if charging with valid data
         # Don't recalculate if we detected stale charging data
-        if not skip_stale_charging_data:
-            if is_charging and current_soc is not None and time_to_full is not None:
+        # Skip when current_soc is None to preserve restored rate after reboot
+        if current_soc is not None and not skip_stale_charging_data:
+            if is_charging and time_to_full is not None:
                 self._state.charging_rate_pct_per_hour = calculate_charging_rate(
                     current_soc, time_to_full
                 )
