@@ -38,6 +38,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         self.platforms: set[str] = set()
+        self.extrapolated_soc_sensors: dict = {}
 
         # Try to get PIN from the options object,
         # if it's empty there - then from the data object
