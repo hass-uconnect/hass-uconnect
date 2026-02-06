@@ -407,11 +407,12 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 soc_changed = False
             elif (
                 soc_changed
-                and self._state.is_charging  # Check if we WERE charging
+                and self._state.is_charging  # Was charging
+                and is_charging  # Still charging (not a state transition)
                 and current_extrapolated is not None
                 and current_soc < current_extrapolated
             ):
-                # Vehicle reports lower SOC than extrapolated while we were charging
+                # Vehicle reports lower SOC than extrapolated while still charging
                 # This is stale data - skip the entire update including state changes
                 _LOGGER.debug(
                     "Skipping stale charging data for %s: car reports %.1f%% but extrapolated is %.1f%%",
