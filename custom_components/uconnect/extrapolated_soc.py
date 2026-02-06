@@ -408,11 +408,24 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 skip_stale_charging_data = True
 
             if soc_changed and self._state.is_idle and is_idle:
-                _LOGGER.debug(
-                    "Skipping SOC update for %s: car is idle, data is stale",
-                    self.vehicle.vin,
-                )
-                soc_changed = False
+                # Accept SOC at or below extrapolation (confirms drain, likely fresh data)
+                # Reject SOC above extrapolation (stale - can't gain charge while idle)
+                if current_extrapolated is not None and current_soc <= current_extrapolated:
+                    _LOGGER.debug(
+                        "Accepting idle SOC update for %s: "
+                        "%.1f%% confirms drain (extrapolated %.1f%%)",
+                        self.vehicle.vin,
+                        current_soc,
+                        current_extrapolated,
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Skipping idle SOC update for %s: "
+                        "%.1f%% above extrapolated (stale data)",
+                        self.vehicle.vin,
+                        current_soc,
+                    )
+                    soc_changed = False
             elif (
                 soc_changed
                 and self._state.is_charging  # Was charging
