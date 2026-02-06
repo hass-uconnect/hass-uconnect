@@ -96,10 +96,12 @@ class SocEstimationState:
         if not isinstance(data, dict):
             return cls()
 
-        # Parse last_actual_soc (must be float or None)
+        # Parse last_actual_soc (must be float 0-100 or None)
         last_soc = data.get("last_actual_soc")
         if last_soc is not None and not isinstance(last_soc, (int, float)):
             last_soc = None
+        if last_soc is not None:
+            last_soc = max(0.0, min(100.0, last_soc))
 
         # Parse timestamp (must be timezone-aware for UTC arithmetic)
         last_time = data.get("last_actual_soc_time")
