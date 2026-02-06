@@ -101,12 +101,15 @@ class SocEstimationState:
         if last_soc is not None and not isinstance(last_soc, (int, float)):
             last_soc = None
 
-        # Parse timestamp
+        # Parse timestamp (must be timezone-aware for UTC arithmetic)
         last_time = data.get("last_actual_soc_time")
         last_time_parsed = None
         if isinstance(last_time, str):
             try:
-                last_time_parsed = datetime.fromisoformat(last_time)
+                parsed = datetime.fromisoformat(last_time)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                last_time_parsed = parsed
             except ValueError:
                 pass
 
