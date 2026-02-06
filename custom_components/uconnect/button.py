@@ -72,21 +72,28 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    # Do not add entities if not configured
-    if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
-        return
-
     coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.unique_id
     ]
-    entities: list[UconnectButton] = []
+    entities = []
 
+    # EV-specific buttons (always available)
     for vehicle in coordinator.client.vehicles.values():
-        entities.append(UconnectButtonUpdate(coordinator, vehicle))
+        if vehicle.vin in coordinator.extrapolated_soc_sensors:
+            entities.append(
+                UconnectResetLearningButton(coordinator, vehicle)
+            )
 
-        for description in BUTTON_DESCRIPTIONS:
-            if description.command.name in vehicle.supported_commands:
-                entities.append(UconnectButton(coordinator, description, vehicle))
+    # Command entities (gated behind option)
+    if config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
+        for vehicle in coordinator.client.vehicles.values():
+            entities.append(UconnectButtonUpdate(coordinator, vehicle))
+
+            for description in BUTTON_DESCRIPTIONS:
+                if description.command.name in vehicle.supported_commands:
+                    entities.append(
+                        UconnectButton(coordinator, description, vehicle)
+                    )
 
     async_add_entities(entities)
     return True
@@ -134,3 +141,26 @@ class UconnectButtonUpdate(ButtonEntity, UconnectEntity):
 
     async def async_press(self, **kwargs):
         await self.coordinator.async_refresh()
+
+
+class UconnectResetLearningButton(ButtonEntity, UconnectEntity):
+    """Button to reset learned battery charging and drain parameters."""
+
+    def __init__(
+        self,
+        coordinator: UconnectDataUpdateCoordinator,
+        vehicle: Vehicle,
+    ):
+        UconnectEntity.__init__(self, coordinator, vehicle)
+
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} "
+            "Reset Battery Learning"
+        )
+        self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_reset_battery_learning"
+        self._attr_icon = "mdi:head-sync-outline"
+
+    async def async_press(self, **kwargs):
+        sensor = self.coordinator.extrapolated_soc_sensors.get(self._vin)
+        if sensor is not None:
+            sensor.reset_learning()

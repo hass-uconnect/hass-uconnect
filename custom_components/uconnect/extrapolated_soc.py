@@ -313,6 +313,13 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         await super().async_will_remove_from_hass()
 
     @callback
+    def reset_learning(self) -> None:
+        """Reset learned correction factor and drain rate to defaults."""
+        self._state.learned_correction_factor = DEFAULT_CORRECTION_FACTOR
+        self._state.idle_drain_rate_pct_per_hour = DEFAULT_IDLE_DRAIN_RATE
+        self.async_write_ha_state()
+
+    @callback
     def _async_update_extrapolation(self, _now: datetime) -> None:
         """Periodically update the extrapolated value."""
         # Update if charging or idle (both need extrapolation)
