@@ -117,16 +117,19 @@ class SocEstimationState:
         )
         if not isinstance(correction, (int, float)):
             correction = DEFAULT_CORRECTION_FACTOR
+        correction = max(MIN_CORRECTION_FACTOR, min(MAX_CORRECTION_FACTOR, correction))
 
         # Parse drain rate with validation
         drain_rate = data.get("idle_drain_rate_pct_per_hour", DEFAULT_IDLE_DRAIN_RATE)
         if not isinstance(drain_rate, (int, float)):
             drain_rate = DEFAULT_IDLE_DRAIN_RATE
+        drain_rate = max(MIN_IDLE_DRAIN_RATE, min(MAX_IDLE_DRAIN_RATE, drain_rate))
 
         # Parse charging rate with validation
         charging_rate = data.get("charging_rate_pct_per_hour", 0.0)
         if not isinstance(charging_rate, (int, float)):
             charging_rate = 0.0
+        charging_rate = max(0.0, min(300.0, charging_rate))
 
         # Parse target SOC with validation (must be between 0 and 100)
         target_soc = data.get("target_soc", 100.0)
