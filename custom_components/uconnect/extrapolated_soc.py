@@ -628,19 +628,19 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         # Check for staleness - only for charging extrapolation
         if elapsed_hours > STALE_THRESHOLD_HOURS:
             _LOGGER.debug(
-                "SOC estimate stale for %s (%.1f hours), returning vehicle SOC",
+                "SOC estimate stale for %s (%.1f hours), returning last accepted SOC",
                 self.vehicle.vin,
                 elapsed_hours,
             )
-            return current_vehicle_soc
+            return base_soc
 
-        # If not charging (and not idle), return fresh vehicle SOC
+        # If not charging (and not idle), return last accepted SOC
         if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
-            return current_vehicle_soc
+            return base_soc
 
         # If already at or above target, no need to extrapolate charging
-        if current_vehicle_soc >= self._state.target_soc:
-            return current_vehicle_soc
+        if base_soc >= self._state.target_soc:
+            return base_soc
 
         # Calculate extrapolated SOC for charging
         rate = self._state.charging_rate_pct_per_hour
