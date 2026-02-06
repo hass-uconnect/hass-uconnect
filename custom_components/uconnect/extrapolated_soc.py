@@ -640,15 +640,15 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 self.vehicle.vin,
                 elapsed_hours,
             )
-            return base_soc
+            return round(base_soc, 1)
 
         # If not charging (and not idle), return last accepted SOC
         if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
-            return base_soc
+            return round(base_soc, 1)
 
         # If already at or above target, no need to extrapolate charging
         if base_soc >= self._state.target_soc:
-            return base_soc
+            return round(base_soc, 1)
 
         # Calculate extrapolated SOC for charging
         rate = self._state.charging_rate_pct_per_hour
