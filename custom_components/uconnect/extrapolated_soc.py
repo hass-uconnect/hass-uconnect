@@ -380,11 +380,12 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             current_extrapolated = self.native_value
             is_idle = not is_charging and not ignition_on
 
-            # Physical constraint: SOC cannot drop while actively charging
-            # This catches stale data even when extrapolation fails (e.g., after HA restart)
+            # Physical constraint: SOC cannot drop while already charging
+            # Uses stored state (was already charging) not current API state,
+            # so idle→charging transitions with lower SOC from idle drain are accepted
             if (
                 soc_changed
-                and is_charging  # Currently charging
+                and self._state.is_charging  # Was already charging
                 and self._state.last_actual_soc is not None
                 and current_soc < self._state.last_actual_soc
             ):
