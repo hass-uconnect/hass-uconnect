@@ -52,16 +52,14 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             email=config_entry.data.get(CONF_USERNAME),
             password=config_entry.data.get(CONF_PASSWORD),
             pin=pin,
-            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(
-                CONF_BRAND_REGION)]],
+            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(CONF_BRAND_REGION)]],
             disable_tls_verification=config_entry.data.get(
                 CONF_DISABLE_TLS_VERIFICATION
             ),
         )
 
         self.refresh_interval: int = (
-            config_entry.options.get(
-                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
+            config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) * 60
         )
 
         super().__init__(
@@ -83,11 +81,9 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.error("Initial data fetch failed: %s", err)
                 raise
             # On subsequent runs, log and fall back to cached data
-            _LOGGER.warning(
-                "Update failed, falling back to cached data: %s", err
-            )
+            _LOGGER.warning("Update failed, falling back to cached data: %s", err)
 
-        return self.data
+        return True
 
     async def async_command(self, vin: str, cmd: Command) -> None:
         """Execute the given command"""
@@ -115,7 +111,6 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def update_options(self, hass: HomeAssistant, config_entry: ConfigEntry):
         self.update_interval = timedelta(
-            seconds=config_entry.options.get(
-                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+            seconds=config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             * 60
         )
