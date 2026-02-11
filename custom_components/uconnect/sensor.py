@@ -215,7 +215,9 @@ async def async_setup_entry(
 
         # Add extrapolated SOC sensors for EVs/PHEVs
         if getattr(vehicle, "state_of_charge", None) is not None:
-            entities.append(UconnectExtrapolatedSocSensor(coordinator, vehicle))
+            sensor = UconnectExtrapolatedSocSensor(coordinator, vehicle)
+            entities.append(sensor)
+            coordinator.extrapolated_soc_sensors[vehicle.vin] = sensor
             entities.append(UconnectChargingRateSensor(coordinator, vehicle))
 
     async_add_entities(entities)

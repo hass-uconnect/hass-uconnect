@@ -96,17 +96,22 @@ class SocEstimationState:
         if not isinstance(data, dict):
             return cls()
 
-        # Parse last_actual_soc (must be float or None)
+        # Parse last_actual_soc (must be float 0-100 or None)
         last_soc = data.get("last_actual_soc")
         if last_soc is not None and not isinstance(last_soc, (int, float)):
             last_soc = None
+        if last_soc is not None:
+            last_soc = max(0.0, min(100.0, last_soc))
 
-        # Parse timestamp
+        # Parse timestamp (must be timezone-aware for UTC arithmetic)
         last_time = data.get("last_actual_soc_time")
         last_time_parsed = None
         if isinstance(last_time, str):
             try:
-                last_time_parsed = datetime.fromisoformat(last_time)
+                parsed = datetime.fromisoformat(last_time)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                last_time_parsed = parsed
             except ValueError:
                 pass
 
@@ -117,16 +122,19 @@ class SocEstimationState:
         )
         if not isinstance(correction, (int, float)):
             correction = DEFAULT_CORRECTION_FACTOR
+        correction = max(MIN_CORRECTION_FACTOR, min(MAX_CORRECTION_FACTOR, correction))
 
         # Parse drain rate with validation
         drain_rate = data.get("idle_drain_rate_pct_per_hour", DEFAULT_IDLE_DRAIN_RATE)
         if not isinstance(drain_rate, (int, float)):
             drain_rate = DEFAULT_IDLE_DRAIN_RATE
+        drain_rate = max(MIN_IDLE_DRAIN_RATE, min(MAX_IDLE_DRAIN_RATE, drain_rate))
 
         # Parse charging rate with validation
         charging_rate = data.get("charging_rate_pct_per_hour", 0.0)
         if not isinstance(charging_rate, (int, float)):
             charging_rate = 0.0
+        charging_rate = max(0.0, min(300.0, charging_rate))
 
         # Parse target SOC with validation (must be between 0 and 100)
         target_soc = data.get("target_soc", 100.0)
@@ -305,6 +313,13 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         await super().async_will_remove_from_hass()
 
     @callback
+    def reset_learning(self) -> None:
+        """Reset learned correction factor and drain rate to defaults."""
+        self._state.learned_correction_factor = DEFAULT_CORRECTION_FACTOR
+        self._state.idle_drain_rate_pct_per_hour = DEFAULT_IDLE_DRAIN_RATE
+        self.async_write_ha_state()
+
+    @callback
     def _async_update_extrapolation(self, _now: datetime) -> None:
         """Periodically update the extrapolated value."""
         # Update if charging or idle (both need extrapolation)
@@ -380,11 +395,12 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             current_extrapolated = self.native_value
             is_idle = not is_charging and not ignition_on
 
-            # Physical constraint: SOC cannot drop while actively charging
-            # This catches stale data even when extrapolation fails (e.g., after HA restart)
+            # Physical constraint: SOC cannot drop while already charging
+            # Uses stored state (was already charging) not current API state,
+            # so idle→charging transitions with lower SOC from idle drain are accepted
             if (
                 soc_changed
-                and is_charging  # Currently charging
+                and self._state.is_charging  # Was already charging
                 and self._state.last_actual_soc is not None
                 and current_soc < self._state.last_actual_soc
             ):
@@ -399,18 +415,32 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 skip_stale_charging_data = True
 
             if soc_changed and self._state.is_idle and is_idle:
-                _LOGGER.debug(
-                    "Skipping SOC update for %s: car is idle, data is stale",
-                    self.vehicle.vin,
-                )
-                soc_changed = False
+                # Accept SOC at or below extrapolation (confirms drain, likely fresh data)
+                # Reject SOC above extrapolation (stale - can't gain charge while idle)
+                if current_extrapolated is not None and current_soc <= current_extrapolated:
+                    _LOGGER.debug(
+                        "Accepting idle SOC update for %s: "
+                        "%.1f%% confirms drain (extrapolated %.1f%%)",
+                        self.vehicle.vin,
+                        current_soc,
+                        current_extrapolated,
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Skipping idle SOC update for %s: "
+                        "%.1f%% above extrapolated (stale data)",
+                        self.vehicle.vin,
+                        current_soc,
+                    )
+                    soc_changed = False
             elif (
                 soc_changed
-                and self._state.is_charging  # Check if we WERE charging
+                and self._state.is_charging  # Was charging
+                and is_charging  # Still charging (not a state transition)
                 and current_extrapolated is not None
                 and current_soc < current_extrapolated
             ):
-                # Vehicle reports lower SOC than extrapolated while we were charging
+                # Vehicle reports lower SOC than extrapolated while still charging
                 # This is stale data - skip the entire update including state changes
                 _LOGGER.debug(
                     "Skipping stale charging data for %s: car reports %.1f%% but extrapolated is %.1f%%",
@@ -426,7 +456,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         was_idle = self._state.is_idle
 
         # Update charging and idle state (unless we detected stale charging data)
-        if not skip_stale_charging_data:
+        # Skip when current_soc is None to preserve restored state after reboot
+        if current_soc is not None and not skip_stale_charging_data:
             self._state.is_charging = is_charging
             self._state.is_idle = not is_charging and not ignition_on
 
@@ -451,8 +482,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         # Calculate charging rate if charging with valid data
         # Don't recalculate if we detected stale charging data
-        if not skip_stale_charging_data:
-            if is_charging and current_soc is not None and time_to_full is not None:
+        # Skip when current_soc is None to preserve restored rate after reboot
+        if current_soc is not None and not skip_stale_charging_data:
+            if is_charging and time_to_full is not None:
                 self._state.charging_rate_pct_per_hour = calculate_charging_rate(
                     current_soc, time_to_full
                 )
@@ -626,19 +658,19 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         # Check for staleness - only for charging extrapolation
         if elapsed_hours > STALE_THRESHOLD_HOURS:
             _LOGGER.debug(
-                "SOC estimate stale for %s (%.1f hours), returning vehicle SOC",
+                "SOC estimate stale for %s (%.1f hours), returning last accepted SOC",
                 self.vehicle.vin,
                 elapsed_hours,
             )
-            return current_vehicle_soc
+            return round(base_soc, 1)
 
-        # If not charging (and not idle), return fresh vehicle SOC
+        # If not charging (and not idle), return last accepted SOC
         if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
-            return current_vehicle_soc
+            return round(base_soc, 1)
 
         # If already at or above target, no need to extrapolate charging
-        if current_vehicle_soc >= self._state.target_soc:
-            return current_vehicle_soc
+        if base_soc >= self._state.target_soc:
+            return round(base_soc, 1)
 
         # Calculate extrapolated SOC for charging
         rate = self._state.charging_rate_pct_per_hour
