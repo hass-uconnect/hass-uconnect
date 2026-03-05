@@ -36,7 +36,9 @@ from .entity import UconnectEntity
 _LOGGER = logging.getLogger(__name__)
 
 # Constants for SOC estimation
-EXTRAPOLATION_UPDATE_INTERVAL = timedelta(minutes=1)  # Update extrapolated value every minute
+EXTRAPOLATION_UPDATE_INTERVAL = timedelta(
+    minutes=1
+)  # Update extrapolated value every minute
 STALE_THRESHOLD_HOURS = 2.0  # Stop extrapolating after this many hours without update
 DEFAULT_CORRECTION_FACTOR = 1.0  # Default correction factor (no correction)
 MIN_CORRECTION_FACTOR = 0.5  # Minimum allowed correction factor
@@ -118,7 +120,7 @@ class SocEstimationState:
         # Handle migration from old "learned_efficiency" to new "learned_correction_factor"
         correction = data.get(
             "learned_correction_factor",
-            data.get("learned_efficiency", DEFAULT_CORRECTION_FACTOR)
+            data.get("learned_efficiency", DEFAULT_CORRECTION_FACTOR),
         )
         if not isinstance(correction, (int, float)):
             correction = DEFAULT_CORRECTION_FACTOR
@@ -138,7 +140,11 @@ class SocEstimationState:
 
         # Parse target SOC with validation (must be between 0 and 100)
         target_soc = data.get("target_soc", 100.0)
-        if not isinstance(target_soc, (int, float)) or target_soc <= 0 or target_soc > 100:
+        if (
+            not isinstance(target_soc, (int, float))
+            or target_soc <= 0
+            or target_soc > 100
+        ):
             target_soc = 100.0
 
         return cls(
@@ -240,8 +246,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_extrapolated_soc"
         self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} "
-            "Extrapolated Battery"
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} Extrapolated Battery"
         )
         self._attr_native_unit_of_measurement = PERCENTAGE
         self._attr_device_class = SensorDeviceClass.BATTERY
@@ -273,9 +278,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                         self._state,
                     )
                 except (KeyError, TypeError, ValueError) as err:
-                    _LOGGER.warning(
-                        "Failed to restore SOC estimation state: %s", err
-                    )
+                    _LOGGER.warning("Failed to restore SOC estimation state: %s", err)
 
         # Initialize with current vehicle state
         self._update_from_vehicle()
@@ -323,9 +326,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
     def _async_update_extrapolation(self, _now: datetime) -> None:
         """Periodically update the extrapolated value."""
         # Update if charging or idle (both need extrapolation)
-        if (
-            (self._state.is_charging and self._state.charging_rate_pct_per_hour > 0)
-            or (self._state.is_idle and self._state.idle_drain_rate_pct_per_hour > 0)
+        if (self._state.is_charging and self._state.charging_rate_pct_per_hour > 0) or (
+            self._state.is_idle and self._state.idle_drain_rate_pct_per_hour > 0
         ):
             self.async_write_ha_state()
 
@@ -353,7 +355,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         try:
             await self.coordinator.async_command(self.vehicle.vin, COMMAND_DEEP_REFRESH)
         except Exception as err:
-            _LOGGER.warning("Daily deep refresh failed for %s: %s", self.vehicle.vin, err)
+            _LOGGER.warning(
+                "Daily deep refresh failed for %s: %s", self.vehicle.vin, err
+            )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -417,7 +421,10 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             if soc_changed and self._state.is_idle and is_idle:
                 # Accept SOC at or below extrapolation (confirms drain, likely fresh data)
                 # Reject SOC above extrapolation (stale - can't gain charge while idle)
-                if current_extrapolated is not None and current_soc <= current_extrapolated:
+                if (
+                    current_extrapolated is not None
+                    and current_soc <= current_extrapolated
+                ):
                     _LOGGER.debug(
                         "Accepting idle SOC update for %s: "
                         "%.1f%% confirms drain (extrapolated %.1f%%)",
@@ -479,6 +486,33 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_soc is not None and soc_changed:
             self._state.last_actual_soc = current_soc
             self._state.last_actual_soc_time = now
+
+        # When transitioning from idle to non-idle (car powers on) without
+        # fresh SOC data, lock in the accumulated idle drain so native_value
+        # doesn't jump back up to the pre-drain baseline
+        if was_idle and not self._state.is_idle and not soc_changed:
+            elapsed_hours = self._get_elapsed_hours(now)
+            if (
+                elapsed_hours is not None
+                and elapsed_hours > 0
+                and self._state.last_actual_soc is not None
+            ):
+                drain = self._state.idle_drain_rate_pct_per_hour * elapsed_hours
+                if drain > 0:
+                    old_soc = self._state.last_actual_soc
+                    self._state.last_actual_soc = max(
+                        0.0, self._state.last_actual_soc - drain
+                    )
+                    self._state.last_actual_soc_time = now
+                    _LOGGER.debug(
+                        "Locked in idle drain for %s: adjusted SOC %.1f%% -> %.1f%% "
+                        "(%.3f%% over %.1fh)",
+                        self.vehicle.vin,
+                        old_soc,
+                        self._state.last_actual_soc,
+                        drain,
+                        elapsed_hours,
+                    )
 
         # Calculate charging rate if charging with valid data
         # Don't recalculate if we detected stale charging data
