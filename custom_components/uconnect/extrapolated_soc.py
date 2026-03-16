@@ -7,7 +7,6 @@ from the vehicle, based on charging status and time-to-full estimates.
 from __future__ import annotations
 
 import logging
-import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -20,14 +19,13 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import callback
 from homeassistant.helpers.event import (
-    async_track_time_change,
+    async_call_later,
     async_track_time_interval,
 )
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from py_uconnect.command import COMMAND_DEEP_REFRESH
-
 from py_uconnect.client import Vehicle
+from py_uconnect.command import COMMAND_DEEP_REFRESH
 
 from .const import DOMAIN
 from .coordinator import UconnectDataUpdateCoordinator
@@ -39,7 +37,6 @@ _LOGGER = logging.getLogger(__name__)
 EXTRAPOLATION_UPDATE_INTERVAL = timedelta(
     minutes=1
 )  # Update extrapolated value every minute
-STALE_THRESHOLD_HOURS = 2.0  # Stop extrapolating after this many hours without update
 DEFAULT_CORRECTION_FACTOR = 1.0  # Default correction factor (no correction)
 MIN_CORRECTION_FACTOR = 0.5  # Minimum allowed correction factor
 MAX_CORRECTION_FACTOR = 1.5  # Maximum allowed correction factor
@@ -54,9 +51,9 @@ MAX_IDLE_DRAIN_RATE = 0.04  # Maximum drain rate (0.04%/hour ≈ 1%/day)
 MIN_IDLE_TIME_FOR_LEARNING_HOURS = 1.0  # Minimum 1 hour idle for learning drain rate
 IDLE_DRAIN_EMA_ALPHA = 0.2  # Slower learning for drain rate (less frequent data points)
 
-# Constants for daily deep refresh
-DEEP_REFRESH_HOUR_START = 2  # Start of window for daily deep refresh (2 AM)
-DEEP_REFRESH_HOUR_END = 5  # End of window for daily deep refresh (5 AM)
+# Constants for deep refresh on charging transition
+MAX_DEEP_REFRESH_RETRIES = 3  # Maximum retry attempts for deep refresh
+DEEP_REFRESH_RETRY_SECONDS = 3600  # Retry interval (1 hour)
 
 
 @dataclass
@@ -255,11 +252,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         self._state = SocEstimationState()
         self._unsub_timer: Callable[[], None] | None = None
-        self._unsub_deep_refresh: Callable[[], None] | None = None
-        self._deep_refresh_hour: int = random.randint(
-            DEEP_REFRESH_HOUR_START, DEEP_REFRESH_HOUR_END
-        )
-        self._deep_refresh_minute: int = random.randint(0, 59)
+        self._unsub_deep_refresh_retry: Callable[[], None] | None = None
 
     async def async_added_to_hass(self) -> None:
         """Restore state when added to hass."""
@@ -290,29 +283,14 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             EXTRAPOLATION_UPDATE_INTERVAL,
         )
 
-        # Set up daily deep refresh at random time between 2-5 AM
-        self._unsub_deep_refresh = async_track_time_change(
-            self.hass,
-            self._async_daily_deep_refresh,
-            hour=self._deep_refresh_hour,
-            minute=self._deep_refresh_minute,
-            second=0,
-        )
-        _LOGGER.info(
-            "Scheduled daily deep refresh for %s at %02d:%02d",
-            self.vehicle.vin,
-            self._deep_refresh_hour,
-            self._deep_refresh_minute,
-        )
-
     async def async_will_remove_from_hass(self) -> None:
         """Clean up timers when entity is removed."""
         if self._unsub_timer:
             self._unsub_timer()
             self._unsub_timer = None
-        if self._unsub_deep_refresh:
-            self._unsub_deep_refresh()
-            self._unsub_deep_refresh = None
+        if self._unsub_deep_refresh_retry:
+            self._unsub_deep_refresh_retry()
+            self._unsub_deep_refresh_retry = None
         await super().async_will_remove_from_hass()
 
     @callback
@@ -331,33 +309,49 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         ):
             self.async_write_ha_state()
 
-    async def _async_daily_deep_refresh(self, _now: datetime) -> None:
-        """Trigger daily deep refresh to get fresh SOC data for learning.
-
-        Only refreshes if the car hasn't been powered on in the last 24 hours,
-        since driving would provide fresh data anyway.
-        """
-        now = datetime.now(timezone.utc)
-        hours_since_update = self._get_elapsed_hours(now)
-
-        if hours_since_update is None:
-            return
-
-        if hours_since_update < 24.0:
-            _LOGGER.debug(
-                "Skipping daily deep refresh for %s - last update was %.1f hours ago",
-                self.vehicle.vin,
-                hours_since_update,
-            )
-            return
-
-        _LOGGER.info("Triggering daily deep refresh for %s", self.vehicle.vin)
+    async def _async_do_deep_refresh(self, attempt: int) -> None:
+        """Execute deep refresh with retry on failure."""
+        _LOGGER.info(
+            "Triggering deep refresh for %s (attempt %d/%d)",
+            self.vehicle.vin,
+            attempt,
+            MAX_DEEP_REFRESH_RETRIES,
+        )
         try:
             await self.coordinator.async_command(self.vehicle.vin, COMMAND_DEEP_REFRESH)
         except Exception as err:
             _LOGGER.warning(
-                "Daily deep refresh failed for %s: %s", self.vehicle.vin, err
+                "Deep refresh failed for %s (attempt %d/%d): %s",
+                self.vehicle.vin,
+                attempt,
+                MAX_DEEP_REFRESH_RETRIES,
+                err,
             )
+            if attempt < MAX_DEEP_REFRESH_RETRIES:
+                self._schedule_deep_refresh_retry(attempt + 1)
+
+    @callback
+    def _schedule_deep_refresh_retry(self, next_attempt: int) -> None:
+        """Schedule a deep refresh retry after an interval."""
+
+        @callback
+        def _retry(_now: datetime) -> None:
+            self._unsub_deep_refresh_retry = None
+            self.hass.async_create_task(self._async_do_deep_refresh(next_attempt))
+
+        if self._unsub_deep_refresh_retry:
+            self._unsub_deep_refresh_retry()
+        self._unsub_deep_refresh_retry = async_call_later(
+            self.hass,
+            DEEP_REFRESH_RETRY_SECONDS,
+            _retry,
+        )
+        _LOGGER.info(
+            "Scheduled deep refresh retry %d/%d in 1 hour for %s",
+            next_attempt,
+            MAX_DEEP_REFRESH_RETRIES,
+            self.vehicle.vin,
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -440,23 +434,6 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                         current_soc,
                     )
                     soc_changed = False
-            elif (
-                soc_changed
-                and self._state.is_charging  # Was charging
-                and is_charging  # Still charging (not a state transition)
-                and current_extrapolated is not None
-                and current_soc < current_extrapolated
-            ):
-                # Vehicle reports lower SOC than extrapolated while still charging
-                # This is stale data - skip the entire update including state changes
-                _LOGGER.debug(
-                    "Skipping stale charging data for %s: car reports %.1f%% but extrapolated is %.1f%%",
-                    self.vehicle.vin,
-                    current_soc,
-                    current_extrapolated,
-                )
-                soc_changed = False
-                skip_stale_charging_data = True
 
         # Save previous state for learning
         was_charging = self._state.is_charging
@@ -528,6 +505,14 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
 
         # Default target SOC to 100% (no target SOC limit for this vehicle type)
         self._state.target_soc = 100.0
+
+        # Trigger deep refresh on idle-to-charging transition for fresh SOC data
+        if was_idle and not was_charging and self._state.is_charging:
+            _LOGGER.info(
+                "Idle-to-charging transition for %s, triggering deep refresh",
+                self.vehicle.vin,
+            )
+            self.hass.async_create_task(self._async_do_deep_refresh(1))
 
     def _learn_correction_factor(
         self,
@@ -688,15 +673,6 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             # Clamp to valid range (don't go below 0)
             extrapolated = max(0.0, extrapolated)
             return round(extrapolated, 1)
-
-        # Check for staleness - only for charging extrapolation
-        if elapsed_hours > STALE_THRESHOLD_HOURS:
-            _LOGGER.debug(
-                "SOC estimate stale for %s (%.1f hours), returning last accepted SOC",
-                self.vehicle.vin,
-                elapsed_hours,
-            )
-            return round(base_soc, 1)
 
         # If not charging (and not idle), return last accepted SOC
         if not self._state.is_charging or self._state.charging_rate_pct_per_hour <= 0:
