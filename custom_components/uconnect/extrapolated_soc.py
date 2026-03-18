@@ -195,21 +195,15 @@ def calculate_charging_rate(
     current_soc: float,
     time_to_full_minutes: float | None,
 ) -> float:
-    """Calculate charging rate in percentage per hour.
+    """Calculate initial charging rate estimate in percentage per hour.
 
-    Uses the time-to-full estimate from the vehicle. The vehicle's estimate
-    already accounts for the CC-CV (constant current/constant voltage) taper
-    behavior, so we calculate a simple average rate.
+    Used as a fallback when no observed rate from consecutive SOC readings
+    is available (e.g., at the start of a charging session).
 
-    Assumptions:
-    - time_to_full_minutes represents time to reach 100% SOC
-    - If the vehicle actually reports time to reach target SOC (not 100%),
-      this calculation will overestimate the rate. The learned correction
-      factor should compensate for this over time.
-
-    Note: This rate represents the average charging speed over the remaining
-    charge time, which naturally decreases as SOC increases (since more of
-    the remaining time is in the slower taper phase above 80%).
+    Note: This computes the average rate over the remaining charge time
+    (current SOC to 100%), which underestimates the instantaneous rate
+    during the CC (constant current) phase since the average includes
+    the slower CV taper phase.
     """
     # Require at least 1 minute to avoid unrealistic rates from tiny values
     if time_to_full_minutes is None or time_to_full_minutes < 1.0:
@@ -435,9 +429,11 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                     )
                     soc_changed = False
 
-        # Save previous state for learning
+        # Save previous state for learning and rate calculation
         was_charging = self._state.is_charging
         was_idle = self._state.is_idle
+        prev_soc = self._state.last_actual_soc
+        prev_soc_time = self._state.last_actual_soc_time
 
         # Update charging and idle state (unless we detected stale charging data)
         # Skip when current_soc is None to preserve restored state after reboot
@@ -495,12 +491,32 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         # Don't recalculate if we detected stale charging data
         # Skip when current_soc is None to preserve restored rate after reboot
         if current_soc is not None and not skip_stale_charging_data:
-            if is_charging and time_to_full is not None:
-                self._state.charging_rate_pct_per_hour = calculate_charging_rate(
-                    current_soc, time_to_full
-                )
+            if is_charging:
+                # Prefer observed rate from consecutive SOC readings.
+                # Require MIN_SOC_CHANGE_FOR_LEARNING to filter out tiny deltas
+                # from idle drain lock-in adjustments.
+                if (
+                    was_charging
+                    and soc_changed
+                    and prev_soc is not None
+                    and prev_soc_time is not None
+                    and current_soc - prev_soc >= MIN_SOC_CHANGE_FOR_LEARNING
+                ):
+                    elapsed = (now - prev_soc_time).total_seconds() / 3600.0
+                    if elapsed >= MIN_TIME_FOR_LEARNING_HOURS:
+                        self._state.charging_rate_pct_per_hour = min(
+                            (current_soc - prev_soc) / elapsed, 300.0
+                        )
+                elif (
+                    self._state.charging_rate_pct_per_hour <= 0
+                    and time_to_full is not None
+                ):
+                    # Initial estimate when no rate is set yet
+                    self._state.charging_rate_pct_per_hour = calculate_charging_rate(
+                        current_soc, time_to_full
+                    )
             else:
-                # Zero rate when not charging OR when missing required data
+                # Zero rate when not charging
                 self._state.charging_rate_pct_per_hour = 0.0
 
         # Default target SOC to 100% (no target SOC limit for this vehicle type)
@@ -739,6 +755,41 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:battery-charging-high"
 
+        self._prev_soc: float | None = None
+        self._prev_soc_time: datetime | None = None
+        self._observed_rate: float | None = None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Track SOC changes to compute observed charging rate."""
+        is_charging = getattr(self.vehicle, "charging", False) or False
+        current_soc = getattr(self.vehicle, "state_of_charge", None)
+
+        if not is_charging or current_soc is None:
+            self._prev_soc = None
+            self._prev_soc_time = None
+            self._observed_rate = None
+            self.async_write_ha_state()
+            return
+
+        now = datetime.now(timezone.utc)
+
+        if self._prev_soc is not None and self._prev_soc_time is not None:
+            delta = current_soc - self._prev_soc
+            if delta >= MIN_SOC_CHANGE_FOR_LEARNING:
+                elapsed_hours = (now - self._prev_soc_time).total_seconds() / 3600.0
+                if elapsed_hours >= MIN_TIME_FOR_LEARNING_HOURS:
+                    self._observed_rate = min(delta / elapsed_hours, 300.0)
+                self._prev_soc = current_soc
+                self._prev_soc_time = now
+            # If delta too small, same, or dropped: keep prev values
+        else:
+            # First reading while charging
+            self._prev_soc = current_soc
+            self._prev_soc_time = now
+
+        self.async_write_ha_state()
+
     @property
     def native_value(self) -> float | None:
         """Return the charging rate."""
@@ -746,6 +797,11 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         if not is_charging:
             return 0.0
 
+        # Prefer observed rate from actual SOC changes
+        if self._observed_rate is not None:
+            return round(self._observed_rate, 1)
+
+        # Fall back to time-to-full estimate for initial reading
         current_soc = getattr(self.vehicle, "state_of_charge", None)
         if current_soc is None:
             return None
@@ -754,7 +810,6 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         time_to_full_l2 = getattr(self.vehicle, "time_to_fully_charge_l2", None)
         time_to_full_l3 = getattr(self.vehicle, "time_to_fully_charge_l3", None)
 
-        # Select the appropriate time-to-full based on charging_level
         time_to_full = select_time_to_full(
             charging_level, time_to_full_l2, time_to_full_l3
         )

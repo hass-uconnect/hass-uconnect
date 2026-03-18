@@ -38,6 +38,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 - Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲ etc. into Home Assistant
 - **Extrapolated Battery**: For EVs, provides a real-time battery estimate between API updates by tracking charging rate and idle drain. Automatically rejects stale data that would show impossible values (e.g., battery dropping while charging), and correctly handles state transitions (e.g., idle to charging, charging to driving). Triggers an automatic deep refresh when charging starts after idle to get fresh SOC data
+- **Charging Rate**: Shows the current charging speed in %/hour. Computed from observed SOC changes between API updates for accuracy, with a time-to-full estimate as fallback for the first reading of a session
 - **Reset Battery Learning**: Button to reset the learned charging correction factor and idle drain rate back to defaults. Useful when changing chargers or if learned values have drifted
 - Multiple Brands: Abarth, Alfa Romeo, Chrysler, Dodge, Fiat, Jeep, Maserati & Ram
 - Multiple Regions: America, Canada, Europe & Asia
