@@ -62,6 +62,9 @@ class SocEstimationState:
 
     last_actual_soc: float | None = None
     last_actual_soc_time: datetime | None = None
+    last_vehicle_soc: float | None = (
+        None  # Raw SOC from vehicle (not adjusted by lock-in)
+    )
     is_charging: bool = False
     is_idle: bool = False  # Not charging and ignition off
     charging_rate_pct_per_hour: float = 0.0
@@ -73,6 +76,7 @@ class SocEstimationState:
         """Convert state to dictionary for storage."""
         return {
             "last_actual_soc": self.last_actual_soc,
+            "last_vehicle_soc": self.last_vehicle_soc,
             "last_actual_soc_time": (
                 self.last_actual_soc_time.isoformat()
                 if self.last_actual_soc_time
@@ -101,6 +105,15 @@ class SocEstimationState:
             last_soc = None
         if last_soc is not None:
             last_soc = max(0.0, min(100.0, last_soc))
+
+        # Parse last_vehicle_soc (must be float 0-100 or None)
+        last_vehicle_soc = data.get("last_vehicle_soc")
+        if last_vehicle_soc is not None and not isinstance(
+            last_vehicle_soc, (int, float)
+        ):
+            last_vehicle_soc = None
+        if last_vehicle_soc is not None:
+            last_vehicle_soc = max(0.0, min(100.0, last_vehicle_soc))
 
         # Parse timestamp (must be timezone-aware for UTC arithmetic)
         last_time = data.get("last_actual_soc_time")
@@ -147,6 +160,9 @@ class SocEstimationState:
         return cls(
             last_actual_soc=float(last_soc) if last_soc is not None else None,
             last_actual_soc_time=last_time_parsed,
+            last_vehicle_soc=(
+                float(last_vehicle_soc) if last_vehicle_soc is not None else None
+            ),
             is_charging=bool(data.get("is_charging", False)),
             is_idle=bool(data.get("is_idle", False)),
             charging_rate_pct_per_hour=float(charging_rate),
@@ -376,8 +392,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             # Only update baseline if SOC actually changed
             # This preserves extrapolation continuity across HA restarts
             soc_changed = (
-                self._state.last_actual_soc is None
-                or current_soc != self._state.last_actual_soc
+                self._state.last_vehicle_soc is None
+                or current_soc != self._state.last_vehicle_soc
             )
 
             # Only update SOC when charging/driving and new value exceeds extrapolated
@@ -459,6 +475,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_soc is not None and soc_changed:
             self._state.last_actual_soc = current_soc
             self._state.last_actual_soc_time = now
+            self._state.last_vehicle_soc = current_soc
 
         # When transitioning from idle to non-idle (car powers on) without
         # fresh SOC data, lock in the accumulated idle drain so native_value
