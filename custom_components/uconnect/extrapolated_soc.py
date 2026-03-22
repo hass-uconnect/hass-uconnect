@@ -263,6 +263,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         self._state = SocEstimationState()
         self._unsub_timer: Callable[[], None] | None = None
         self._unsub_deep_refresh_retry: Callable[[], None] | None = None
+        self._has_session_rate: bool = False
 
     async def async_added_to_hass(self) -> None:
         """Restore state when added to hass."""
@@ -524,17 +525,23 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                         self._state.charging_rate_pct_per_hour = min(
                             (current_soc - prev_soc) / elapsed, 300.0
                         )
-                elif (
-                    self._state.charging_rate_pct_per_hour <= 0
-                    and time_to_full is not None
-                ):
-                    # Initial estimate when no rate is set yet
-                    self._state.charging_rate_pct_per_hour = calculate_charging_rate(
-                        current_soc, time_to_full
-                    )
+                        self._has_session_rate = True
+                elif not self._has_session_rate and time_to_full is not None:
+                    # Use time-to-full estimate when no observed rate is
+                    # available yet this session. This also overrides any
+                    # stale rate carried over from a previous session.
+                    # Only accept a positive rate so that a zero return
+                    # (e.g. time_to_full < 1 min) does not lock out retries
+                    # or discard a usable stale fallback.
+                    rate = calculate_charging_rate(current_soc, time_to_full)
+                    if rate > 0:
+                        self._state.charging_rate_pct_per_hour = rate
+                        self._has_session_rate = True
             else:
-                # Zero rate when not charging
-                self._state.charging_rate_pct_per_hour = 0.0
+                # Reset session flag so the next charging session can
+                # pick up a fresh time-to-full estimate. The rate itself
+                # is preserved as a fallback for the next session.
+                self._has_session_rate = False
 
         # Default target SOC to 100% (no target SOC limit for this vehicle type)
         self._state.target_soc = 100.0
