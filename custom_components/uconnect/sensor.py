@@ -199,6 +199,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Battery State of Charge",
         icon="mdi:battery",
     ),
+    UconnectSensorEntityDescription(
+        key="time_to_fully_charge_l1",
+        name="Time to Charge L1",
+        icon="mdi:battery-clock",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.DURATION,
+    ),
 )
 
 
