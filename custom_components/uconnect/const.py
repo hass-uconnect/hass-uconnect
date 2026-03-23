@@ -1,6 +1,24 @@
 """Constants for the Uconnect integration"""
 
-from py_uconnect.brands import *
+from py_uconnect.brands import (
+    ALFA_ROMEO_ASIA,
+    ALFA_ROMEO_EU,
+    ALFA_ROMEO_US_CANADA,
+    CHRYSLER_CANADA,
+    CHRYSLER_US,
+    DODGE_US,
+    FIAT_ASIA,
+    FIAT_CANADA,
+    FIAT_EU,
+    FIAT_US,
+    JEEP_ASIA,
+    JEEP_EU,
+    JEEP_US,
+    MASERATI_ASIA,
+    MASERATI_EU,
+    MASERATI_US_CANADA,
+    RAM_US,
+)
 
 DOMAIN: str = "uconnect"
 

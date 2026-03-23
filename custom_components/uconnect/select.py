@@ -9,8 +9,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-_LOGGER = logging.getLogger(__name__)
-
 from py_uconnect.client import Vehicle
 from py_uconnect.api import (
     CHARGING_LEVELS,
@@ -20,11 +18,12 @@ from py_uconnect.api import (
     CHARGING_LEVEL_FOUR,
     CHARGING_LEVEL_FIVE,
 )
-from py_uconnect.command import *
 
 from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
 from .coordinator import UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 CHARGING_LEVEL_NAMES = [x.name for x in CHARGING_LEVELS]
 
@@ -55,7 +54,6 @@ async def async_setup_entry(
             entities.append(UconnectSelectSetChargingLevel(coordinator, vehicle))
 
     async_add_entities(entities)
-    return True
 
 
 class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
@@ -73,9 +71,7 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
 
     @property
     def icon(self):
-        return ICONS.get(
-            self.vehicle.charging_level_preference, "mdi:battery-charging"
-        )
+        return ICONS.get(self.vehicle.charging_level_preference, "mdi:battery-charging")
 
     @property
     def options(self):
@@ -89,7 +85,5 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
         try:
             await self.coordinator.async_set_charging_level(self.vehicle.vin, option)
         except Exception as err:
-            _LOGGER.error(
-                "Failed to set charging level to %s: %s", option, err
-            )
+            _LOGGER.error("Failed to set charging level to %s: %s", option, err)
             raise HomeAssistantError(f"Failed to set charging level: {err}") from err

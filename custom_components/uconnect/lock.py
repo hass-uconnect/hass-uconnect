@@ -11,17 +11,21 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-_LOGGER = logging.getLogger(__name__)
-
 from py_uconnect.client import Vehicle
-from py_uconnect.command import *
+from py_uconnect.command import (
+    COMMAND_DOORS_LOCK,
+    COMMAND_DOORS_UNLOCK,
+    Command,
+)
 
 from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
 from .coordinator import UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
 
+_LOGGER = logging.getLogger(__name__)
 
-@dataclass
+
+@dataclass(frozen=True, kw_only=True)
 class UconnectLockEntityDescription(LockEntityDescription):
     """A class that describes custom lock entities."""
 
@@ -29,7 +33,7 @@ class UconnectLockEntityDescription(LockEntityDescription):
     icon_unlocked: str | None = None
     command_on: Command | None = None
     command_off: Command | None = None
-    is_locked: Callable[[Vehicle], bool] | None = None
+    is_locked: Callable[[Vehicle], bool | None] | None = None
 
 
 LOCK_DESCRIPTIONS: Final[tuple[UconnectLockEntityDescription, ...]] = (
@@ -60,17 +64,19 @@ async def async_setup_entry(
     entities: list[UconnectLock] = []
     for vehicle in coordinator.client.vehicles.values():
         for description in LOCK_DESCRIPTIONS:
-            if (
-                description.is_locked is not None and (
-                    description.command_on.name in vehicle.supported_commands
-                    or description.command_off.name in vehicle.supported_commands
+            if description.is_locked is not None and (
+                (
+                    description.command_on is not None
+                    and description.command_on.name in vehicle.supported_commands
+                )
+                or (
+                    description.command_off is not None
+                    and description.command_off.name in vehicle.supported_commands
                 )
             ):
-                entities.append(UconnectLock(
-                    coordinator, description, vehicle))
+                entities.append(UconnectLock(coordinator, description, vehicle))
 
     async_add_entities(entities)
-    return True
 
 
 class UconnectLock(LockEntity, UconnectEntity):
@@ -84,8 +90,9 @@ class UconnectLock(LockEntity, UconnectEntity):
 
         self.entity_description: UconnectLockEntityDescription = description
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
-        self._attr_name = f"{vehicle.make} {
-            vehicle.nickname or vehicle.model} {description.name}"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
+        )
 
     @property
     def icon(self):

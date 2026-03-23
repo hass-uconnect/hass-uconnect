@@ -32,7 +32,7 @@ from .extrapolated_soc import (
 )
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class UconnectSensorEntityDescription(SensorEntityDescription):
     """A class that describes custom sensor entities."""
 
@@ -202,7 +202,7 @@ async def async_setup_entry(
     coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.unique_id
     ]
-    entities = []
+    entities: list[SensorEntity] = []
 
     for vehicle in coordinator.client.get_vehicles().values():
         for description in SENSOR_DESCRIPTIONS:
@@ -210,8 +210,7 @@ async def async_setup_entry(
                 getattr(vehicle, description.key, None) is not None
                 or description.get is not None
             ):
-                entities.append(UconnectSensor(
-                    coordinator, description, vehicle))
+                entities.append(UconnectSensor(coordinator, description, vehicle))
 
         # Add extrapolated SOC sensors for EVs/PHEVs
         if getattr(vehicle, "state_of_charge", None) is not None:
@@ -221,7 +220,6 @@ async def async_setup_entry(
             entities.append(UconnectChargingRateSensor(coordinator, vehicle))
 
     async_add_entities(entities)
-    return True
 
 
 class UconnectSensor(SensorEntity, UconnectEntity):
@@ -241,8 +239,9 @@ class UconnectSensor(SensorEntity, UconnectEntity):
         self._key = self._description.key
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{self._key}"
         self._attr_icon = self._description.icon
-        self._attr_name = f"{vehicle.make} {
-            vehicle.nickname or vehicle.model} {description.name}"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
+        )
         self._attr_state_class = self._description.state_class
         self._attr_device_class = self._description.device_class
 

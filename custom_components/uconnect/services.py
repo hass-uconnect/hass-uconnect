@@ -4,7 +4,29 @@ from homeassistant.core import ServiceCall, callback, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry
 
-from py_uconnect.command import *
+from py_uconnect.command import (
+    COMMAND_CHARGE,
+    COMMAND_COMFORT_OFF,
+    COMMAND_COMFORT_ON,
+    COMMAND_DEEP_REFRESH,
+    COMMAND_DOORS_LOCK,
+    COMMAND_DOORS_UNLOCK,
+    COMMAND_ENGINE_OFF,
+    COMMAND_ENGINE_ON,
+    COMMAND_HVAC_OFF,
+    COMMAND_HVAC_ON,
+    COMMAND_LIFTGATE_LOCK,
+    COMMAND_LIFTGATE_UNLOCK,
+    COMMAND_LIGHTS,
+    COMMAND_LIGHTS_HORN,
+    COMMAND_PRECOND_OFF,
+    COMMAND_PRECOND_ON,
+    COMMAND_REFRESH_LOCATION,
+    COMMAND_TRUNK_LOCK,
+    COMMAND_TRUNK_UNLOCK,
+    COMMANDS_BY_NAME,
+    Command,
+)
 
 from .const import DOMAIN
 from .coordinator import UconnectDataUpdateCoordinator
@@ -93,7 +115,9 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
             if vehicle is None:
                 raise HomeAssistantError(f"Vehicle {vin} not found")
             if cmd.name not in vehicle.supported_commands:
-                raise HomeAssistantError(f"Service {call.service} is not supported by this vehicle")
+                raise HomeAssistantError(
+                    f"Service {call.service} is not supported by this vehicle"
+                )
 
             await coordinator.async_command(vin, cmd)
         else:
@@ -169,7 +193,9 @@ def _get_coordinator_from_device(
         None,
     )
     if config_entry_id is None:
-        raise ValueError(f"No config entry found for device: {call.data.get(ATTR_DEVICE_ID)}")
+        raise ValueError(
+            f"No config entry found for device: {call.data.get(ATTR_DEVICE_ID)}"
+        )
 
     config_entry = hass.config_entries.async_get_entry(config_entry_id)
     if config_entry is None:

@@ -22,7 +22,7 @@ from .coordinator import UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class UconnectBinarySensorEntityDescription(BinarySensorEntityDescription):
     """A class that describes custom binary sensor entities."""
 
@@ -173,7 +173,6 @@ async def async_setup_entry(
                 entities.append(UconnectBinarySensor(coordinator, description, vehicle))
 
     async_add_entities(entities)
-    return True
 
 
 class UconnectBinarySensor(BinarySensorEntity, UconnectEntity):
@@ -191,8 +190,9 @@ class UconnectBinarySensor(BinarySensorEntity, UconnectEntity):
         self.postprocess = description.postprocess
         self.entity_description: UconnectBinarySensorEntityDescription = description
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
-        self._attr_name = f"{vehicle.make} {
-            vehicle.nickname or vehicle.model} {description.name}"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
+        )
 
     @property
     def is_on(self) -> bool | None:

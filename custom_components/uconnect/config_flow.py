@@ -17,7 +17,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from py_uconnect.api import API
@@ -80,7 +80,7 @@ class UconnectOptionFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle options init setup."""
 
         if user_input is not None:
@@ -109,13 +109,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
 
         if user_input is None:
-            return self.async_show_form(
-                data_schema=STEP_USER_DATA_SCHEMA
-            )
+            return self.async_show_form(data_schema=STEP_USER_DATA_SCHEMA)
 
         errors = {}
 
@@ -129,7 +127,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         else:
             if self.reauth_entry is None:
                 title = f"{BRANDS[user_input[CONF_BRAND_REGION]]} {
-                    user_input[CONF_USERNAME]}"
+                    user_input[CONF_USERNAME]
+                }"
                 await self.async_set_unique_id(
                     hashlib.sha256(title.encode("utf-8")).hexdigest()
                 )
