@@ -158,6 +158,12 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
         on_icon="mdi:car-seat-heater",
         off_icon="mdi:car-seat",
     ),
+    UconnectBinarySensorEntityDescription(
+        key="ev_cabin_cond",
+        name="Cabin Conditioning",
+        on_icon="mdi:air-conditioner",
+        off_icon="mdi:air-conditioner",
+    ),
 )
 
 
