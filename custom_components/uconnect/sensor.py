@@ -194,6 +194,11 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         name="Fuel Type",
         icon="mdi:gas-station",
     ),
+    UconnectSensorEntityDescription(
+        key="battery_state_of_charge",
+        name="Battery State of Charge",
+        icon="mdi:battery",
+    ),
 )
 
 
