@@ -1,6 +1,7 @@
 {
     "domain": "uconnect",
     "name": "Uconnect",
+    "after_dependencies": ["http", "lovelace"],
     "codeowners": [
         "@blind-oracle"
     ],

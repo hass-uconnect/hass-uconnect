@@ -81,12 +81,28 @@ After the integration is initialized - you might want to go into its options and
 
 ![image](https://github.com/user-attachments/assets/587c9ec0-bbd0-4918-b84b-4235316a58cf)
 
-## Example dashboard
+## Built-in Vehicle Card
 
-![image](https://github.com/user-attachments/assets/ceaa1133-be82-4506-a915-7e7c50fb58b6)
+The integration includes a custom Lovelace card (`custom:uconnect-vehicle-card`) that is automatically registered on setup. It shows:
+
+- **Header**: Vehicle name and VIN (or custom license plate)
+- **Indicators**: Doors, windows, trunk, charging status, ignition
+- **SOC/Fuel bar**: Battery percentage with charging animation, range value
+- **Vehicle image**: From the image entity (if available)
+- **Mini map**: Live location from the device tracker
+- **Quick info**: Location, range, charging state, tire pressure, 12V battery, odometer
+
+To add the card: Edit a dashboard, add a card, search for "Uconnect Vehicle", and select your vehicle.
+
+![card example](custom_components/uconnect/frontend/card-example.png)
+
+Card configuration options (all toggleable):
+- `device_id` (required): Select your vehicle
+- `license_plate`: Display a license plate instead of VIN
+- `show_indicators`, `show_range`, `show_image`, `show_map`, `show_buttons`: Toggle sections
 
 ## Useful Resources
 
-Cards: 
+Cards:
   - [Ultra Vehicle Card](https://github.com/WJDDesigns/Ultra-Vehicle-Card)
   - [Vehicle Status Card](https://github.com/ngocjohn/vehicle-status-card)
