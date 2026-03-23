@@ -7,6 +7,7 @@ from the vehicle, based on charging status and time-to-full estimates.
 from __future__ import annotations
 
 import logging
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
@@ -43,6 +44,7 @@ MAX_CORRECTION_FACTOR = 1.5  # Maximum allowed correction factor
 CORRECTION_EMA_ALPHA = 0.3  # Exponential moving average factor for correction learning
 MIN_TIME_FOR_LEARNING_HOURS = 0.05  # Minimum 3 minutes for learning
 MIN_SOC_CHANGE_FOR_LEARNING = 0.5  # Minimum 0.5% SOC change for learning
+CHARGING_RATE_WINDOW = timedelta(minutes=60)  # Sliding window for rate computation
 
 # Constants for idle drain estimation
 DEFAULT_IDLE_DRAIN_RATE = 0.006  # Default 0.006%/hour ≈ 1%/week ≈ 4%/month
@@ -263,6 +265,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         self._state = SocEstimationState()
         self._unsub_timer: Callable[[], None] | None = None
         self._unsub_deep_refresh_retry: Callable[[], None] | None = None
+        self._has_session_rate: bool = False
 
     async def async_added_to_hass(self) -> None:
         """Restore state when added to hass."""
@@ -524,17 +527,23 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                         self._state.charging_rate_pct_per_hour = min(
                             (current_soc - prev_soc) / elapsed, 300.0
                         )
-                elif (
-                    self._state.charging_rate_pct_per_hour <= 0
-                    and time_to_full is not None
-                ):
-                    # Initial estimate when no rate is set yet
-                    self._state.charging_rate_pct_per_hour = calculate_charging_rate(
-                        current_soc, time_to_full
-                    )
+                        self._has_session_rate = True
+                elif not self._has_session_rate and time_to_full is not None:
+                    # Use time-to-full estimate when no observed rate is
+                    # available yet this session. This also overrides any
+                    # stale rate carried over from a previous session.
+                    # Only accept a positive rate so that a zero return
+                    # (e.g. time_to_full < 1 min) does not lock out retries
+                    # or discard a usable stale fallback.
+                    rate = calculate_charging_rate(current_soc, time_to_full)
+                    if rate > 0:
+                        self._state.charging_rate_pct_per_hour = rate
+                        self._has_session_rate = True
             else:
-                # Zero rate when not charging
-                self._state.charging_rate_pct_per_hour = 0.0
+                # Reset session flag so the next charging session can
+                # pick up a fresh time-to-full estimate. The rate itself
+                # is preserved as a fallback for the next session.
+                self._has_session_rate = False
 
         # Default target SOC to 100% (no target SOC limit for this vehicle type)
         self._state.target_soc = 100.0
@@ -772,8 +781,7 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:battery-charging-high"
 
-        self._prev_soc: float | None = None
-        self._prev_soc_time: datetime | None = None
+        self._soc_history: deque[tuple[datetime, float]] = deque()
         self._observed_rate: float | None = None
 
     @callback
@@ -783,27 +791,26 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         current_soc = getattr(self.vehicle, "state_of_charge", None)
 
         if not is_charging or current_soc is None:
-            self._prev_soc = None
-            self._prev_soc_time = None
+            self._soc_history.clear()
             self._observed_rate = None
             self.async_write_ha_state()
             return
 
         now = datetime.now(timezone.utc)
+        self._soc_history.append((now, current_soc))
 
-        if self._prev_soc is not None and self._prev_soc_time is not None:
-            delta = current_soc - self._prev_soc
-            if delta >= MIN_SOC_CHANGE_FOR_LEARNING:
-                elapsed_hours = (now - self._prev_soc_time).total_seconds() / 3600.0
-                if elapsed_hours >= MIN_TIME_FOR_LEARNING_HOURS:
-                    self._observed_rate = min(delta / elapsed_hours, 300.0)
-                self._prev_soc = current_soc
-                self._prev_soc_time = now
-            # If delta too small, same, or dropped: keep prev values
-        else:
-            # First reading while charging
-            self._prev_soc = current_soc
-            self._prev_soc_time = now
+        # Trim entries outside the sliding window
+        cutoff = now - CHARGING_RATE_WINDOW
+        while self._soc_history and self._soc_history[0][0] < cutoff:
+            self._soc_history.popleft()
+
+        # Compute rate across the window span
+        if len(self._soc_history) >= 2:
+            oldest_time, oldest_soc = self._soc_history[0]
+            elapsed_hours = (now - oldest_time).total_seconds() / 3600.0
+            delta = current_soc - oldest_soc
+            if elapsed_hours >= MIN_TIME_FOR_LEARNING_HOURS and delta >= 0:
+                self._observed_rate = min(delta / elapsed_hours, 300.0)
 
         self.async_write_ha_state()
 
