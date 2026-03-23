@@ -14,6 +14,7 @@ PLATFORMS: list[str] = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
     Platform.DEVICE_TRACKER,
+    Platform.IMAGE,
     Platform.LOCK,
     Platform.SWITCH,
     Platform.BUTTON,
