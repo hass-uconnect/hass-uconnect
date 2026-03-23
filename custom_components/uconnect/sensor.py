@@ -189,6 +189,11 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         get=lambda x: x.location.updated if x.location else None,
         device_class=SensorDeviceClass.TIMESTAMP,
     ),
+    UconnectSensorEntityDescription(
+        key="fuel_type",
+        name="Fuel Type",
+        icon="mdi:gas-station",
+    ),
 )
 
 

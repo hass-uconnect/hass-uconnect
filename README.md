@@ -36,7 +36,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 ## Features ✔️
 
-- Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲ etc. into Home Assistant
+- Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲, fuel type etc. into Home Assistant
 - **Vehicle Image**: Displays your vehicle's image as an entity. The image is downloaded once and cached locally for fast access
 - **Extrapolated Battery**: For EVs, provides a real-time battery estimate between API updates by tracking charging rate and idle drain. Automatically rejects stale data that would show impossible values (e.g., battery dropping while charging), and correctly handles state transitions (e.g., idle to charging, charging to driving). Triggers an automatic deep refresh when charging starts after idle to get fresh SOC data. Preserves the charging rate across sessions so that extrapolation begins immediately when a new charging session starts, even before time-to-full data is available from the API
 - **Charging Rate**: Shows the current charging speed in %/hour. Computed over a 60-minute sliding window of SOC readings for stable output even with integer SOC values and irregular polling. Falls back to a time-to-full estimate during the first hour of a session
