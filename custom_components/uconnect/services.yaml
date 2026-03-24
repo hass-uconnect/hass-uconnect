@@ -174,3 +174,15 @@ refresh_location:
       selector:
         device:
           integration: uconnect
+
+set_charge_schedule:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: uconnect
+    schedule:
+      required: true
+      selector:
+        object:

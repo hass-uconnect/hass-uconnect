@@ -267,6 +267,20 @@
                     "description": "Target vehicle"
                 }
             }
+        },
+        "set_charge_schedule": {
+            "name": "Set Charge Schedule",
+            "description": "Set the EV charge schedule",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                },
+                "schedule": {
+                    "name": "Schedule",
+                    "description": "Charge schedule as a JSON object"
+                }
+            }
         }
     }
 }

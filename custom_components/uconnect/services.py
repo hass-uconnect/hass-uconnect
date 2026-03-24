@@ -58,6 +58,7 @@ SERVICE_CHARGE_V4 = "charge_now_v4"
 SERVICE_DEEP_REFRESH = "deep_refresh"
 SERVICE_DEEP_REFRESH_V2 = "deep_refresh_v2"
 SERVICE_REFRESH_LOCATION = "refresh_location"
+SERVICE_SET_CHARGE_SCHEDULE = "set_charge_schedule"
 
 SUPPORTED_SERVICES = [
     SERVICE_UPDATE,
@@ -154,6 +155,21 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
         ):
             hass.services.async_register(DOMAIN, service, async_call_service)
 
+    # Register charge schedule service if any vehicle has schedule data
+    if coordinator.charge_schedule_data:
+
+        async def async_set_charge_schedule(call: ServiceCall):
+            coord = _get_coordinator_from_device(hass, call)
+            vin = _get_vin_from_device(hass, call)
+            schedule = call.data.get("schedule")
+            if not isinstance(schedule, dict):
+                raise HomeAssistantError("schedule must be a JSON object")
+            await coord.async_set_charge_schedule(vin, schedule)
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_SET_CHARGE_SCHEDULE, async_set_charge_schedule
+        )
+
     return True
 
 
@@ -161,6 +177,7 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
 def async_unload_services(hass) -> None:
     for service in SUPPORTED_SERVICES:
         hass.services.async_remove(DOMAIN, service)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_CHARGE_SCHEDULE)
 
 
 def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:

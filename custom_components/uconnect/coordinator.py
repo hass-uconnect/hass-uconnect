@@ -41,6 +41,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         self.extrapolated_soc_sensors: dict = {}
         self.vhr_data: dict[str, dict] = {}
         self.maintenance_data: dict[str, dict] = {}
+        self.charge_schedule_data: dict[str, dict] = {}
 
         # Try to get PIN from the options object,
         # if it's empty there - then from the data object
@@ -107,6 +108,24 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             except Exception as err:
                 _LOGGER.debug("Maintenance history not available for %s: %s", vin, err)
+
+            try:
+                self.charge_schedule_data[vin] = await self.hass.async_add_executor_job(
+                    self.client.get_charge_schedules, vin
+                )
+            except Exception as err:
+                _LOGGER.debug("Charge schedules not available for %s: %s", vin, err)
+
+    async def async_set_charge_schedule(self, vin: str, schedule: dict) -> None:
+        """Set a charge schedule"""
+
+        r = await self.hass.async_add_executor_job(
+            self.client.set_charge_schedule_verify, vin, schedule
+        )
+        await self.async_refresh()
+
+        if not r:
+            raise HomeAssistantError("Set charge schedule failed")
 
     async def async_command(self, vin: str, cmd: Command) -> None:
         """Execute the given command"""

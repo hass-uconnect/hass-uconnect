@@ -239,6 +239,10 @@ async def async_setup_entry(
         if vehicle.vin in coordinator.maintenance_data:
             entities.append(UconnectMaintenanceSensor(coordinator, vehicle))
 
+        # Add charge schedule sensor if data is available
+        if vehicle.vin in coordinator.charge_schedule_data:
+            entities.append(UconnectChargeScheduleSensor(coordinator, vehicle))
+
         # Add extrapolated SOC sensors for EVs/PHEVs
         if getattr(vehicle, "state_of_charge", None) is not None:
             sensor = UconnectExtrapolatedSocSensor(coordinator, vehicle)
@@ -416,3 +420,47 @@ class UconnectMaintenanceSensor(SensorEntity, UconnectEntity):
             "last_service_location": latest.get("location"),
             "total_records": len(history),
         }
+
+
+class UconnectChargeScheduleSensor(SensorEntity, UconnectEntity):
+    """Uconnect Charge Schedule sensor."""
+
+    def __init__(
+        self,
+        coordinator: UconnectDataUpdateCoordinator,
+        vehicle: Vehicle,
+    ):
+        """Initialize the charge schedule sensor."""
+
+        super().__init__(coordinator, vehicle)
+
+        self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_charge_schedule"
+        self._attr_icon = "mdi:calendar-clock"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} Charge Schedule"
+        )
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        """Return the number of schedules."""
+
+        data = self.coordinator.charge_schedule_data.get(self._vin)
+        if data is None:
+            return None
+
+        schedules = data.get("chargeSchedules") or data.get("chargeSchedulesV4") or []
+        if not isinstance(schedules, list):
+            return None
+
+        return len(schedules)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the full schedule data."""
+
+        data = self.coordinator.charge_schedule_data.get(self._vin)
+        if data is None:
+            return None
+
+        return {"schedules": data}

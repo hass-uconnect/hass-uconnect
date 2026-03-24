@@ -60,6 +60,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
   - `Doors Lock/Unlock`: Lock/Unlock vehicle doors
   - `Engine On/Off`: Remotely starts/stops the vehicle engine
   - `Cabin Ventilation`: Activates cabin ventilation
+  - `Set Charge Schedule`: Sets the EV charge schedule (accepts a JSON object)
   - `Charge Now`: Initiates EV charging
   - `Charge Now (V4)`: Initiates EV charging using V4 API
   - `HVAC On/Off`: Toggles the HVAC
