@@ -127,6 +127,14 @@ liftgate_unlock:
         device:
           integration: uconnect
 
+cabin_ventilation:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
 charge_now:
   fields:
     device_id:

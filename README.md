@@ -58,6 +58,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
   - `Trunk Lock/Unlock` / `Liftgate Lock/Unlock`: Lock/Unlock trunk/liftgate
   - `Doors Lock/Unlock`: Lock/Unlock vehicle doors
   - `Engine On/Off`: Remotely starts/stops the vehicle engine
+  - `Cabin Ventilation`: Activates cabin ventilation
   - `Charge Now`: Initiates EV charging
   - `HVAC On/Off`: Toggles the HVAC
   - `Comfort On/Off`: Another alternative to the above HVAC commands (depends on make/model)

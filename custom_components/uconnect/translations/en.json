@@ -208,6 +208,16 @@
                 }
             }
         },
+        "cabin_ventilation": {
+            "name": "Cabin Ventilation",
+            "description": "Activate cabin ventilation",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
         "charge_now": {
             "name": "Charge Now",
             "description": "Start the vehicle charging",
