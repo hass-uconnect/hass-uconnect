@@ -248,6 +248,16 @@
                 }
             }
         },
+        "deep_refresh_v2": {
+            "name": "Deep Refresh (V2)",
+            "description": "Force update vehicle charge & other parameters using V2 API",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
         "refresh_location": {
             "name": "Location Refresh",
             "description": "Update the vehicle location",

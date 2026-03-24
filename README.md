@@ -52,6 +52,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Available commands are:
   - `Refresh Location`: Updates the vehicle location
   - `Deep Refresh`: Refreshes EV battery level
+  - `Deep Refresh (V2)`: Refreshes EV battery level using V2 API
   - `Lights/Horn`: Trigger vehicle horn and lights
   - `Lights`: Trigger vehicle lights
   - `Preconditioning On/Off`: Toggle vehicle preconditioning

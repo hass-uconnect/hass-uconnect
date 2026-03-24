@@ -159,6 +159,14 @@ deep_refresh:
         device:
           integration: uconnect
 
+deep_refresh_v2:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
 refresh_location:
   fields:
     device_id:
