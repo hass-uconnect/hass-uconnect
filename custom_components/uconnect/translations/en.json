@@ -228,6 +228,16 @@
                 }
             }
         },
+        "charge_now_v4": {
+            "name": "Charge Now (V4)",
+            "description": "Start the vehicle charging using V4 API",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
         "deep_refresh": {
             "name": "Deep Refresh",
             "description": "Force update vehicle charge & other parameters",

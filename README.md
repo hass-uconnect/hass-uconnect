@@ -60,6 +60,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
   - `Engine On/Off`: Remotely starts/stops the vehicle engine
   - `Cabin Ventilation`: Activates cabin ventilation
   - `Charge Now`: Initiates EV charging
+  - `Charge Now (V4)`: Initiates EV charging using V4 API
   - `HVAC On/Off`: Toggles the HVAC
   - `Comfort On/Off`: Another alternative to the above HVAC commands (depends on make/model)
   - `Update`: Asks the integration to update the data from the API immediately

@@ -143,6 +143,14 @@ charge_now:
         device:
           integration: uconnect
 
+charge_now_v4:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
 deep_refresh:
   fields:
     device_id:
