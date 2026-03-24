@@ -235,6 +235,10 @@ async def async_setup_entry(
         if vehicle.vin in coordinator.vhr_data:
             entities.append(UconnectVhrSensor(coordinator, vehicle))
 
+        # Add maintenance history sensor if data is available
+        if vehicle.vin in coordinator.maintenance_data:
+            entities.append(UconnectMaintenanceSensor(coordinator, vehicle))
+
         # Add extrapolated SOC sensors for EVs/PHEVs
         if getattr(vehicle, "state_of_charge", None) is not None:
             sensor = UconnectExtrapolatedSocSensor(coordinator, vehicle)
@@ -347,3 +351,68 @@ class UconnectVhrSensor(SensorEntity, UconnectEntity):
                 attrs[f"{cat_key}.{item_key}"] = item.get("value")
 
         return attrs
+
+
+class UconnectMaintenanceSensor(SensorEntity, UconnectEntity):
+    """Uconnect Maintenance History sensor."""
+
+    def __init__(
+        self,
+        coordinator: UconnectDataUpdateCoordinator,
+        vehicle: Vehicle,
+    ):
+        """Initialize the maintenance sensor."""
+
+        super().__init__(coordinator, vehicle)
+
+        self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_maintenance"
+        self._attr_icon = "mdi:wrench-clock"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} Maintenance History"
+        )
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def _get_history(self) -> list[dict]:
+        """Return the service history list."""
+
+        data = self.coordinator.maintenance_data.get(self._vin)
+        if data is None:
+            return []
+
+        history = data.get("serviceHistory")
+        if not isinstance(history, list):
+            return []
+
+        return history
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the most recent service date."""
+
+        history = self._get_history()
+        if not history:
+            return None
+
+        date = history[0].get("date")
+        if date is None:
+            return None
+
+        return datetime.fromtimestamp(date / 1000).astimezone()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return details of the most recent service record."""
+
+        history = self._get_history()
+        if not history:
+            return None
+
+        latest = history[0]
+
+        return {
+            "last_service_description": latest.get("description"),
+            "last_service_dealer": latest.get("dealer"),
+            "last_service_odometer": latest.get("odometer"),
+            "last_service_location": latest.get("location"),
+            "total_records": len(history),
+        }
