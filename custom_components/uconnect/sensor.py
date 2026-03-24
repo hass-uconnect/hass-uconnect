@@ -159,7 +159,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
     ),
     UconnectSensorEntityDescription(
         key="oil_level",
-        name="Oil Level",
+        name="Oil Life",
         icon="mdi:oil",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
