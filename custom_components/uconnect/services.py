@@ -177,7 +177,8 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
 def async_unload_services(hass) -> None:
     for service in SUPPORTED_SERVICES:
         hass.services.async_remove(DOMAIN, service)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_CHARGE_SCHEDULE)
+    if hass.services.has_service(DOMAIN, SERVICE_SET_CHARGE_SCHEDULE):
+        hass.services.async_remove(DOMAIN, SERVICE_SET_CHARGE_SCHEDULE)
 
 
 def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
