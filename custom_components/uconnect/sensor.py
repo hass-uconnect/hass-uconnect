@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Final, Callable, Any
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from py_uconnect.client import Vehicle
 
@@ -230,6 +231,10 @@ async def async_setup_entry(
             ):
                 entities.append(UconnectSensor(coordinator, description, vehicle))
 
+        # Add VHR sensor if data is available
+        if vehicle.vin in coordinator.vhr_data:
+            entities.append(UconnectVhrSensor(coordinator, vehicle))
+
         # Add extrapolated SOC sensors for EVs/PHEVs
         if getattr(vehicle, "state_of_charge", None) is not None:
             sensor = UconnectExtrapolatedSocSensor(coordinator, vehicle)
@@ -280,3 +285,65 @@ class UconnectSensor(SensorEntity, UconnectEntity):
             return getattr(self.vehicle, f"{self._key}_unit")
 
         return self._description.native_unit_of_measurement
+
+
+class UconnectVhrSensor(SensorEntity, UconnectEntity):
+    """Uconnect Vehicle Health Report sensor."""
+
+    def __init__(
+        self,
+        coordinator: UconnectDataUpdateCoordinator,
+        vehicle: Vehicle,
+    ):
+        """Initialize the VHR sensor."""
+
+        super().__init__(coordinator, vehicle)
+
+        self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_vhr"
+        self._attr_icon = "mdi:car-wrench"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} Health Report"
+        )
+        self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the report timestamp."""
+
+        data = self.coordinator.vhr_data.get(self._vin)
+        if data is None:
+            return None
+
+        report_card = data.get("reportCard")
+        if not isinstance(report_card, dict):
+            return None
+
+        ts = report_card.get("timestamp")
+        if ts is None:
+            return None
+
+        return datetime.fromtimestamp(ts / 1000).astimezone()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the report items as attributes."""
+
+        data = self.coordinator.vhr_data.get(self._vin)
+        if data is None:
+            return None
+
+        report_card = data.get("reportCard")
+        if not isinstance(report_card, dict):
+            return None
+
+        attrs: dict[str, Any] = {}
+
+        for category in report_card.get("items", []):
+            cat_key = category.get("itemKey", "unknown")
+            attrs[cat_key] = category.get("value")
+
+            for item in category.get("items", []):
+                item_key = item.get("itemKey", "unknown")
+                attrs[f"{cat_key}.{item_key}"] = item.get("value")
+
+        return attrs

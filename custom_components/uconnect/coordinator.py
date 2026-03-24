@@ -39,6 +39,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize the coordinator."""
         self.platforms: set[str] = set()
         self.extrapolated_soc_sensors: dict = {}
+        self.vhr_data: dict[str, dict] = {}
 
         # Try to get PIN from the options object,
         # if it's empty there - then from the data object
@@ -84,7 +85,21 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             # On subsequent runs, log and fall back to cached data
             _LOGGER.warning("Update failed, falling back to cached data: %s", err)
 
+        await self._async_update_vhr()
+
         return True
+
+    async def _async_update_vhr(self) -> None:
+        """Fetch vehicle health reports for all vehicles."""
+
+        for vin in self.client.vehicles:
+            try:
+                data = await self.hass.async_add_executor_job(
+                    self.client.get_vehicle_health_report, vin
+                )
+                self.vhr_data[vin] = data
+            except Exception as err:
+                _LOGGER.debug("VHR not available for %s: %s", vin, err)
 
     async def async_command(self, vin: str, cmd: Command) -> None:
         """Execute the given command"""
