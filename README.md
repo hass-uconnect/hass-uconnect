@@ -24,7 +24,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 - Home Assistant
 - [HACS](https://www.hacs.xyz) (Home Assistant Community Store) 
-- A vehicle using Uconnect cellular services, **vehicles that use [SiriusXM Guardian](https://www.driveuconnect.com/sirius-xm-guardian/siriusxm-guardian-modal.html) are not supported**
+- A vehicle using Uconnect cellular services (see [SiriusXM Guardian](#siriusxm-guardian-vehicles) below if your vehicle uses SXM Guardian)
 - Check the links below:
   - Alfa Romeo: https://connect.alfaromeo.com
   - Chrysler: https://connect.chrysler.com
@@ -66,6 +66,26 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
   - `HVAC On/Off`: Toggles the HVAC
   - `Comfort On/Off`: Another alternative to the above HVAC commands (depends on make/model)
   - `Update`: Asks the integration to update the data from the API immediately
+
+## SiriusXM Guardian Vehicles
+
+Some US-market vehicles use SiriusXM Guardian as their connected services provider
+instead of the standard Uconnect cellular service. These vehicles were previously
+reported as unsupported, but analysis of the official Stellantis mobile apps shows
+that SiriusXM Guardian vehicles use the **same cloud API** as standard Uconnect
+vehicles once the account is properly linked. The SXM Guardian identity is an
+authentication layer, not a separate vehicle backend.
+
+If your SiriusXM Guardian vehicle does not appear in Home Assistant:
+
+1. Install the official app for your brand (My Uconnect, Jeep, Ram, etc.)
+2. Log in and ensure your vehicle is visible and functional in the official app
+3. If the app prompts you to link your Mopar account, complete the linking process
+4. Once the vehicle works in the official app, retry adding it to this integration
+   using the same credentials
+
+If after linking your vehicle still does not appear, please open an issue with
+your vehicle year, make, model, and whether it shows as working in the official app.
 
 ## What will NEVER work? ❌
 
