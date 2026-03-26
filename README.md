@@ -71,21 +71,26 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 Some US-market vehicles use SiriusXM Guardian as their connected services provider
 instead of the standard Uconnect cellular service. These vehicles were previously
-reported as unsupported, but analysis of the official Stellantis mobile apps shows
-that SiriusXM Guardian vehicles use the **same cloud API** as standard Uconnect
-vehicles once the account is properly linked. The SXM Guardian identity is an
-authentication layer, not a separate vehicle backend.
+reported as unsupported.
+
+Analysis of the official Stellantis mobile apps (Ram, Chrysler, Wagoneer NAFTA) shows
+that there are **no separate API endpoints** for SXM Guardian vehicles. All vehicles
+use the same cloud API regardless of SDP type. The apps contain a legacy Mopar login
+fallback that triggers a server-side account migration to Gigya when needed.
+
+This suggests SXM Guardian vehicles should work once the account is migrated. However,
+this has not been confirmed with a real SXM Guardian account yet.
 
 If your SiriusXM Guardian vehicle does not appear in Home Assistant:
 
-1. Install the official app for your brand (My Uconnect, Jeep, Ram, etc.)
-2. Log in and ensure your vehicle is visible and functional in the official app
-3. If the app prompts you to link your Mopar account, complete the linking process
-4. Once the vehicle works in the official app, retry adding it to this integration
-   using the same credentials
+1. Install the official app for your brand (Jeep, Ram, Chrysler, Dodge, etc.)
+2. Log in with your Mopar/SXM Guardian credentials
+3. If the app prompts you to link or migrate your account, complete the process
+4. Verify your vehicle is visible and functional in the official app
+5. Use the same credentials with this integration
 
-If after linking your vehicle still does not appear, please open an issue with
-your vehicle year, make, model, and whether it shows as working in the official app.
+If your vehicle still does not appear after completing these steps, please open an
+issue with your vehicle year, make, model, and whether it shows in the official app.
 
 ## What will NEVER work? ❌
 
