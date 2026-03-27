@@ -16,17 +16,32 @@ from homeassistant.components.switch import (
     SwitchEntity,
 )
 
-_LOGGER = logging.getLogger(__name__)
-
 from py_uconnect.client import Vehicle
-from py_uconnect.command import *
+from py_uconnect.command import (
+    COMMAND_CHARGE,
+    COMMAND_COMFORT_OFF,
+    COMMAND_COMFORT_ON,
+    COMMAND_DOORS_LOCK,
+    COMMAND_DOORS_UNLOCK,
+    COMMAND_ENGINE_OFF,
+    COMMAND_ENGINE_ON,
+    COMMAND_HVAC_OFF,
+    COMMAND_HVAC_ON,
+    COMMAND_PRECOND_OFF,
+    COMMAND_PRECOND_ON,
+    COMMAND_TRUNK_LOCK,
+    COMMAND_TRUNK_UNLOCK,
+    Command,
+)
 
 from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
 from .coordinator import UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
 
+_LOGGER = logging.getLogger(__name__)
 
-@dataclass
+
+@dataclass(frozen=True, kw_only=True)
 class UconnectSwitchEntityDescription(SwitchEntityDescription):
     """A class that describes custom switch entities."""
 
@@ -34,7 +49,7 @@ class UconnectSwitchEntityDescription(SwitchEntityDescription):
     command_off: Command | None = None
     on_icon: str | None = None
     off_icon: str | None = None
-    is_on: Callable[[Vehicle], bool] | None = None
+    is_on: Callable[[Vehicle], bool | None] | None = None
     is_available: Callable[[Vehicle], bool] = lambda x: True
 
 
@@ -80,8 +95,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
         command_on=COMMAND_DOORS_LOCK,
         command_off=COMMAND_DOORS_UNLOCK,
         is_on=lambda x: getattr(x, "door_driver_locked", None),
-        is_available=lambda x: getattr(
-            x, "door_driver_locked", None) is not None,
+        is_available=lambda x: getattr(x, "door_driver_locked", None) is not None,
         device_class=SwitchDeviceClass.SWITCH,
     ),
     UconnectSwitchEntityDescription(
@@ -121,15 +135,17 @@ async def async_setup_entry(
 
     for vehicle in coordinator.client.vehicles.values():
         for description in SWITCH_DESCRIPTIONS:
-            if ((
-                description.command_on is not None
-                and description.command_on.name in vehicle.supported_commands
-            ) or (
-                description.command_off is not None
-                and description.command_off.name in vehicle.supported_commands
-            )) and description.is_available(vehicle):
-                entities.append(UconnectSwitch(
-                    coordinator, description, vehicle))
+            if (
+                (
+                    description.command_on is not None
+                    and description.command_on.name in vehicle.supported_commands
+                )
+                or (
+                    description.command_off is not None
+                    and description.command_off.name in vehicle.supported_commands
+                )
+            ) and description.is_available(vehicle):
+                entities.append(UconnectSwitch(coordinator, description, vehicle))
 
     async_add_entities(entities)
 
@@ -144,8 +160,9 @@ class UconnectSwitch(SwitchEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self.entity_description: UconnectSwitchEntityDescription = description
-        self._attr_name = f"{vehicle.make} {
-            vehicle.nickname or vehicle.model} {description.name}"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
+        )
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
 
     @property

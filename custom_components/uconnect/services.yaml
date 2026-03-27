@@ -127,7 +127,23 @@ liftgate_unlock:
         device:
           integration: uconnect
 
+cabin_ventilation:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
 charge_now:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
+charge_now_v4:
   fields:
     device_id:
       required: false
@@ -143,6 +159,14 @@ deep_refresh:
         device:
           integration: uconnect
 
+deep_refresh_v2:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
 refresh_location:
   fields:
     device_id:
@@ -150,3 +174,15 @@ refresh_location:
       selector:
         device:
           integration: uconnect
+
+set_charge_schedule:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: uconnect
+    schedule:
+      required: true
+      selector:
+        object:

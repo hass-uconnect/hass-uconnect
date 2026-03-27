@@ -12,6 +12,8 @@ from .coordinator import UconnectDataUpdateCoordinator
 class UconnectEntity(CoordinatorEntity):
     """Class for base entity for Uconnect integration."""
 
+    coordinator: UconnectDataUpdateCoordinator
+
     def __init__(self, coordinator: UconnectDataUpdateCoordinator, vehicle: Vehicle):
         """Initialize the base entity."""
         super().__init__(coordinator)

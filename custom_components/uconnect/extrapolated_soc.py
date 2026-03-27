@@ -201,6 +201,7 @@ def select_time_to_full(
     # Fallback: use whichever is available
     if valid_l2 and valid_l3:
         # Both available - use the smaller one (likely the active charger)
+        assert time_l2 is not None and time_l3 is not None
         return min(time_l2, time_l3)
     elif valid_l3:
         return time_l3
@@ -739,7 +740,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
-        attrs = {
+        attrs: dict[str, Any] = {
             "last_actual_soc": self._state.last_actual_soc,
             "last_update": (
                 self._state.last_actual_soc_time.isoformat()

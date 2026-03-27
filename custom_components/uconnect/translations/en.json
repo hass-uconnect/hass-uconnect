@@ -208,9 +208,29 @@
                 }
             }
         },
+        "cabin_ventilation": {
+            "name": "Cabin Ventilation",
+            "description": "Activate cabin ventilation",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
         "charge_now": {
             "name": "Charge Now",
             "description": "Start the vehicle charging",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
+        "charge_now_v4": {
+            "name": "Charge Now (V4)",
+            "description": "Start the vehicle charging using V4 API",
             "fields": {
                 "device_id": {
                     "name": "Vehicle",
@@ -228,6 +248,16 @@
                 }
             }
         },
+        "deep_refresh_v2": {
+            "name": "Deep Refresh (V2)",
+            "description": "Force update vehicle charge & other parameters using V2 API",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
         "refresh_location": {
             "name": "Location Refresh",
             "description": "Update the vehicle location",
@@ -235,6 +265,20 @@
                 "device_id": {
                     "name": "Vehicle",
                     "description": "Target vehicle"
+                }
+            }
+        },
+        "set_charge_schedule": {
+            "name": "Set Charge Schedule",
+            "description": "Set the EV charge schedule",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                },
+                "schedule": {
+                    "name": "Schedule",
+                    "description": "Charge schedule as a JSON object"
                 }
             }
         }

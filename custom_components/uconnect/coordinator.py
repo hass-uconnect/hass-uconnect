@@ -39,6 +39,9 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize the coordinator."""
         self.platforms: set[str] = set()
         self.extrapolated_soc_sensors: dict = {}
+        self.vhr_data: dict[str, dict] = {}
+        self.maintenance_data: dict[str, dict] = {}
+        self.charge_schedule_data: dict[str, dict] = {}
 
         # Try to get PIN from the options object,
         # if it's empty there - then from the data object
@@ -53,7 +56,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             email=config_entry.data.get(CONF_USERNAME),
             password=config_entry.data.get(CONF_PASSWORD),
             pin=pin,
-            brand=BRANDS_BY_NAME[BRANDS[config_entry.data.get(CONF_BRAND_REGION)]],
+            brand=BRANDS_BY_NAME[BRANDS[config_entry.data[CONF_BRAND_REGION]]],
             disable_tls_verification=config_entry.data.get(
                 CONF_DISABLE_TLS_VERIFICATION
             ),
@@ -84,7 +87,45 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             # On subsequent runs, log and fall back to cached data
             _LOGGER.warning("Update failed, falling back to cached data: %s", err)
 
+        await self._async_update_extra_data()
+
         return True
+
+    async def _async_update_extra_data(self) -> None:
+        """Fetch extra data (VHR, maintenance) for all vehicles."""
+
+        for vin in self.client.vehicles:
+            try:
+                self.vhr_data[vin] = await self.hass.async_add_executor_job(
+                    self.client.get_vehicle_health_report, vin
+                )
+            except Exception as err:
+                _LOGGER.debug("VHR not available for %s: %s", vin, err)
+
+            try:
+                self.maintenance_data[vin] = await self.hass.async_add_executor_job(
+                    self.client.get_maintenance_history, vin
+                )
+            except Exception as err:
+                _LOGGER.debug("Maintenance history not available for %s: %s", vin, err)
+
+            try:
+                self.charge_schedule_data[vin] = await self.hass.async_add_executor_job(
+                    self.client.get_charge_schedules, vin
+                )
+            except Exception as err:
+                _LOGGER.debug("Charge schedules not available for %s: %s", vin, err)
+
+    async def async_set_charge_schedule(self, vin: str, schedule: dict) -> None:
+        """Set a charge schedule"""
+
+        r = await self.hass.async_add_executor_job(
+            self.client.set_charge_schedule_verify, vin, schedule
+        )
+        await self.async_refresh()
+
+        if not r:
+            raise HomeAssistantError("Set charge schedule failed")
 
     async def async_command(self, vin: str, cmd: Command) -> None:
         """Execute the given command"""

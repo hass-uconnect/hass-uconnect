@@ -24,7 +24,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 - Home Assistant
 - [HACS](https://www.hacs.xyz) (Home Assistant Community Store) 
-- A vehicle using Uconnect cellular services, **vehicles that use [SiriusXM Guardian](https://www.driveuconnect.com/sirius-xm-guardian/siriusxm-guardian-modal.html) are not supported**
+- A vehicle using Uconnect cellular services (see [SiriusXM Guardian](#siriusxm-guardian-vehicles) below if your vehicle uses SXM Guardian)
 - Check the links below:
   - Alfa Romeo: https://connect.alfaromeo.com
   - Chrysler: https://connect.chrysler.com
@@ -36,7 +36,8 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 ## Features ✔️
 
-- Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲ etc. into Home Assistant
+- Imports statistics like battery level 🔋, tire pressure ‍💨, odometer ⏲, fuel type, vehicle health report, maintenance history etc. into Home Assistant
+- **Vehicle Image**: Displays your vehicle's image as an entity. The image is downloaded once and cached locally for fast access
 - **Extrapolated Battery**: For EVs, provides a real-time battery estimate between API updates by tracking charging rate and idle drain. Automatically rejects stale data that would show impossible values (e.g., battery dropping while charging), and correctly handles state transitions (e.g., idle to charging, charging to driving). Triggers an automatic deep refresh when charging starts after idle to get fresh SOC data. Preserves the charging rate across sessions so that extrapolation begins immediately when a new charging session starts, even before time-to-full data is available from the API
 - **Charging Rate**: Shows the current charging speed in %/hour. Computed over a 60-minute sliding window of SOC readings for stable output even with integer SOC values and irregular polling. Falls back to a time-to-full estimate during the first hour of a session
 - **Reset Battery Learning**: Button to reset the learned charging correction factor and idle drain rate back to defaults. Useful when changing chargers or if learned values have drifted
@@ -51,16 +52,45 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Available commands are:
   - `Refresh Location`: Updates the vehicle location
   - `Deep Refresh`: Refreshes EV battery level
+  - `Deep Refresh (V2)`: Refreshes EV battery level using V2 API
   - `Lights/Horn`: Trigger vehicle horn and lights
   - `Lights`: Trigger vehicle lights
   - `Preconditioning On/Off`: Toggle vehicle preconditioning
   - `Trunk Lock/Unlock` / `Liftgate Lock/Unlock`: Lock/Unlock trunk/liftgate
   - `Doors Lock/Unlock`: Lock/Unlock vehicle doors
   - `Engine On/Off`: Remotely starts/stops the vehicle engine
+  - `Cabin Ventilation`: Activates cabin ventilation
+  - `Set Charge Schedule`: Sets the EV charge schedule (accepts a JSON object)
   - `Charge Now`: Initiates EV charging
+  - `Charge Now (V4)`: Initiates EV charging using V4 API
   - `HVAC On/Off`: Toggles the HVAC
   - `Comfort On/Off`: Another alternative to the above HVAC commands (depends on make/model)
   - `Update`: Asks the integration to update the data from the API immediately
+
+## SiriusXM Guardian Vehicles
+
+Some US-market vehicles use SiriusXM Guardian as their connected services provider
+instead of the standard Uconnect cellular service. These vehicles were previously
+reported as unsupported.
+
+Analysis of the official Stellantis mobile apps (Ram, Chrysler, Wagoneer NAFTA) shows
+that there are **no separate API endpoints** for SXM Guardian vehicles. All vehicles
+use the same cloud API regardless of SDP type. The apps contain a legacy Mopar login
+fallback that triggers a server-side account migration to Gigya when needed.
+
+This suggests SXM Guardian vehicles should work once the account is migrated. However,
+this has not been confirmed with a real SXM Guardian account yet.
+
+If your SiriusXM Guardian vehicle does not appear in Home Assistant:
+
+1. Install the official app for your brand (Jeep, Ram, Chrysler, Dodge, etc.)
+2. Log in with your Mopar/SXM Guardian credentials
+3. If the app prompts you to link or migrate your account, complete the process
+4. Verify your vehicle is visible and functional in the official app
+5. Use the same credentials with this integration
+
+If your vehicle still does not appear after completing these steps, please open an
+issue with your vehicle year, make, model, and whether it shows in the official app.
 
 ## What will NEVER work? ❌
 
@@ -80,12 +110,28 @@ After the integration is initialized - you might want to go into its options and
 
 ![image](https://github.com/user-attachments/assets/587c9ec0-bbd0-4918-b84b-4235316a58cf)
 
-## Example dashboard
+## Built-in Vehicle Card
 
-![image](https://github.com/user-attachments/assets/ceaa1133-be82-4506-a915-7e7c50fb58b6)
+The integration includes a custom Lovelace card (`custom:uconnect-vehicle-card`) that is automatically registered on setup. It shows:
+
+- **Header**: Vehicle name and VIN (or custom license plate)
+- **Indicators**: Doors, windows, trunk, charging status, ignition
+- **SOC/Fuel bar**: Battery percentage with charging animation, range value
+- **Vehicle image**: From the image entity (if available)
+- **Mini map**: Live location from the device tracker
+- **Quick info**: Location, range, charging state, tire pressure, 12V battery, odometer
+
+To add the card: Edit a dashboard, add a card, search for "Uconnect Vehicle", and select your vehicle.
+
+![card example](custom_components/uconnect/frontend/card-example.png)
+
+Card configuration options (all toggleable):
+- `device_id` (required): Select your vehicle
+- `license_plate`: Display a license plate instead of VIN
+- `show_indicators`, `show_range`, `show_image`, `show_map`, `show_buttons`: Toggle sections
 
 ## Useful Resources
 
-Cards: 
+Cards:
   - [Ultra Vehicle Card](https://github.com/WJDDesigns/Ultra-Vehicle-Card)
   - [Vehicle Status Card](https://github.com/ngocjohn/vehicle-status-card)

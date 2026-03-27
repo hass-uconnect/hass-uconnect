@@ -4,7 +4,32 @@ from homeassistant.core import ServiceCall, callback, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry
 
-from py_uconnect.command import *
+from py_uconnect.command import (
+    COMMAND_CABIN_VENTILATION,
+    COMMAND_CHARGE,
+    COMMAND_CHARGE_V4,
+    COMMAND_COMFORT_OFF,
+    COMMAND_COMFORT_ON,
+    COMMAND_DEEP_REFRESH,
+    COMMAND_DEEP_REFRESH_V2,
+    COMMAND_DOORS_LOCK,
+    COMMAND_DOORS_UNLOCK,
+    COMMAND_ENGINE_OFF,
+    COMMAND_ENGINE_ON,
+    COMMAND_HVAC_OFF,
+    COMMAND_HVAC_ON,
+    COMMAND_LIFTGATE_LOCK,
+    COMMAND_LIFTGATE_UNLOCK,
+    COMMAND_LIGHTS,
+    COMMAND_LIGHTS_HORN,
+    COMMAND_PRECOND_OFF,
+    COMMAND_PRECOND_ON,
+    COMMAND_REFRESH_LOCATION,
+    COMMAND_TRUNK_LOCK,
+    COMMAND_TRUNK_UNLOCK,
+    COMMANDS_BY_NAME,
+    Command,
+)
 
 from .const import DOMAIN
 from .coordinator import UconnectDataUpdateCoordinator
@@ -27,9 +52,13 @@ SERVICE_TRUNK_UNLOCK = "trunk_unlock"
 SERVICE_TRUNK_LOCK = "trunk_lock"
 SERVICE_LIFTGATE_UNLOCK = "liftgate_unlock"
 SERVICE_LIFTGATE_LOCK = "liftgate_lock"
+SERVICE_CABIN_VENTILATION = "cabin_ventilation"
 SERVICE_CHARGE = "charge_now"
+SERVICE_CHARGE_V4 = "charge_now_v4"
 SERVICE_DEEP_REFRESH = "deep_refresh"
+SERVICE_DEEP_REFRESH_V2 = "deep_refresh_v2"
 SERVICE_REFRESH_LOCATION = "refresh_location"
+SERVICE_SET_CHARGE_SCHEDULE = "set_charge_schedule"
 
 SUPPORTED_SERVICES = [
     SERVICE_UPDATE,
@@ -49,8 +78,11 @@ SUPPORTED_SERVICES = [
     SERVICE_TRUNK_LOCK,
     SERVICE_LIFTGATE_UNLOCK,
     SERVICE_LIFTGATE_LOCK,
+    SERVICE_CABIN_VENTILATION,
     SERVICE_CHARGE,
+    SERVICE_CHARGE_V4,
     SERVICE_DEEP_REFRESH,
+    SERVICE_DEEP_REFRESH_V2,
     SERVICE_REFRESH_LOCATION,
 ]
 
@@ -71,8 +103,11 @@ SERVICES_COMMANDS: dict[str, Command] = {
     SERVICE_TRUNK_LOCK: COMMAND_TRUNK_LOCK,
     SERVICE_LIFTGATE_UNLOCK: COMMAND_LIFTGATE_UNLOCK,
     SERVICE_LIFTGATE_LOCK: COMMAND_LIFTGATE_LOCK,
+    SERVICE_CABIN_VENTILATION: COMMAND_CABIN_VENTILATION,
     SERVICE_CHARGE: COMMAND_CHARGE,
+    SERVICE_CHARGE_V4: COMMAND_CHARGE_V4,
     SERVICE_DEEP_REFRESH: COMMAND_DEEP_REFRESH,
+    SERVICE_DEEP_REFRESH_V2: COMMAND_DEEP_REFRESH_V2,
     SERVICE_REFRESH_LOCATION: COMMAND_REFRESH_LOCATION,
 }
 
@@ -93,7 +128,9 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
             if vehicle is None:
                 raise HomeAssistantError(f"Vehicle {vin} not found")
             if cmd.name not in vehicle.supported_commands:
-                raise HomeAssistantError(f"Service {call.service} is not supported by this vehicle")
+                raise HomeAssistantError(
+                    f"Service {call.service} is not supported by this vehicle"
+                )
 
             await coordinator.async_command(vin, cmd)
         else:
@@ -118,6 +155,21 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
         ):
             hass.services.async_register(DOMAIN, service, async_call_service)
 
+    # Register charge schedule service if any vehicle has schedule data
+    if coordinator.charge_schedule_data:
+
+        async def async_set_charge_schedule(call: ServiceCall):
+            coord = _get_coordinator_from_device(hass, call)
+            vin = _get_vin_from_device(hass, call)
+            schedule = call.data.get("schedule")
+            if not isinstance(schedule, dict):
+                raise HomeAssistantError("schedule must be a JSON object")
+            await coord.async_set_charge_schedule(vin, schedule)
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_SET_CHARGE_SCHEDULE, async_set_charge_schedule
+        )
+
     return True
 
 
@@ -125,6 +177,8 @@ def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -> bool
 def async_unload_services(hass) -> None:
     for service in SUPPORTED_SERVICES:
         hass.services.async_remove(DOMAIN, service)
+    if hass.services.has_service(DOMAIN, SERVICE_SET_CHARGE_SCHEDULE):
+        hass.services.async_remove(DOMAIN, SERVICE_SET_CHARGE_SCHEDULE)
 
 
 def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
@@ -169,7 +223,9 @@ def _get_coordinator_from_device(
         None,
     )
     if config_entry_id is None:
-        raise ValueError(f"No config entry found for device: {call.data.get(ATTR_DEVICE_ID)}")
+        raise ValueError(
+            f"No config entry found for device: {call.data.get(ATTR_DEVICE_ID)}"
+        )
 
     config_entry = hass.config_entries.async_get_entry(config_entry_id)
     if config_entry is None:

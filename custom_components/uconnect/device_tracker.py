@@ -29,7 +29,6 @@ async def async_setup_entry(
             entities.append(UconnectTracker(coordinator, vehicle))
 
     async_add_entities(entities)
-    return True
 
 
 class UconnectTracker(TrackerEntity, UconnectEntity):
@@ -40,8 +39,7 @@ class UconnectTracker(TrackerEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_location"
-        self._attr_name = f"{vehicle.make} {
-            vehicle.nickname or vehicle.model} Location"
+        self._attr_name = f"{vehicle.make} {vehicle.nickname or vehicle.model} Location"
         self._attr_icon = "mdi:map-marker-outline"
 
     @property
