@@ -1,7 +1,10 @@
 {
     "domain": "uconnect",
     "name": "Uconnect",
-    "after_dependencies": ["http", "lovelace"],
+    "after_dependencies": [
+        "http",
+        "lovelace"
+    ],
     "codeowners": [
         "@blind-oracle"
     ],
@@ -16,7 +19,7 @@
         "custom_components.uconnect"
     ],
     "requirements": [
-        "py-uconnect==0.3.11"
+        "py-uconnect==0.4.0"
     ],
-    "version": "0.4.9"
+    "version": "0.5.0"
 }
