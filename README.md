@@ -9,9 +9,10 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Abarth: Works ✅
 - Alfa Romeo: Works ✅
 - Chrysler: Unknown ❔
-- Dodge: Unknown ❔
+- Dodge: Works ✅
 - Fiat: Works ✅
 - Jeep: Works ✅
+- Lancia: Works ✅
 - Maserati: Unknown ❔
 - Ram: Works ✅
 
