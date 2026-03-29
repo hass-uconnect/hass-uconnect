@@ -134,5 +134,5 @@ Card configuration options (all toggleable):
 ## Useful Resources
 
 Cards:
-  - [Ultra Vehicle Card](https://github.com/WJDDesigns/Ultra-Vehicle-Card)
+  - [Ultra Card](https://github.com/WJDDesigns/Ultra-Card)
   - [Vehicle Status Card](https://github.com/ngocjohn/vehicle-status-card)
