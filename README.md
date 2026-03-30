@@ -8,7 +8,7 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 
 - Abarth: Works ✅
 - Alfa Romeo: Works ✅
-- Chrysler: Unknown ❔
+- Chrysler: Works ✅
 - Dodge: Works ✅
 - Fiat: Works ✅
 - Jeep: Works ✅
