@@ -42,6 +42,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
         self.vhr_data: dict[str, dict] = {}
         self.maintenance_data: dict[str, dict] = {}
         self.charge_schedule_data: dict[str, dict] = {}
+        self.svla_data: dict[str, dict] = {}
 
         # Try to get PIN from the options object,
         # if it's empty there - then from the data object
@@ -115,6 +116,15 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             except Exception as err:
                 _LOGGER.debug("Charge schedules not available for %s: %s", vin, err)
+
+            try:
+                self.svla_data[vin] = await self.hass.async_add_executor_job(
+                    self.client.get_stolen_vehicle_status, vin
+                )
+            except Exception as err:
+                _LOGGER.debug(
+                    "Stolen vehicle status not available for %s: %s", vin, err
+                )
 
     async def async_set_charge_schedule(self, vin: str, schedule: dict) -> None:
         """Set a charge schedule"""
