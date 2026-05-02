@@ -48,6 +48,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=2,
     ),
     UconnectSensorEntityDescription(
         key="distance_to_empty",
@@ -56,6 +57,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="range_gas",
@@ -64,6 +66,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="range_total",
@@ -72,6 +75,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="state_of_charge",
@@ -79,6 +83,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.BATTERY,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="charging_level",
@@ -92,6 +97,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.VOLTAGE,
+        suggested_display_precision=1,
     ),
     UconnectSensorEntityDescription(
         key="time_to_fully_charge_l2",
@@ -100,6 +106,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.DURATION,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="time_to_fully_charge_l3",
@@ -108,6 +115,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.DURATION,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="distance_to_service",
@@ -116,6 +124,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="days_to_service",
@@ -124,6 +133,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfTime.DAYS,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="wheel_front_left_pressure",
@@ -132,6 +142,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="wheel_front_right_pressure",
@@ -140,6 +151,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="wheel_rear_left_pressure",
@@ -148,6 +160,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="wheel_rear_right_pressure",
@@ -156,6 +169,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         device_class=SensorDeviceClass.PRESSURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UNIT_DYNAMIC,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="oil_level",
@@ -163,6 +177,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         icon="mdi:oil",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="fuel_amount",
@@ -170,6 +185,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         icon="mdi:fuel",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="timestamp_info",
@@ -199,6 +215,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         key="battery_state_of_charge",
         name="Battery State of Charge",
         icon="mdi:battery",
+        suggested_display_precision=0,
     ),
     UconnectSensorEntityDescription(
         key="time_to_fully_charge_l1",
@@ -207,6 +224,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectSensorEntityDescription, ...]] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.DURATION,
+        suggested_display_precision=0,
     ),
 )
 
