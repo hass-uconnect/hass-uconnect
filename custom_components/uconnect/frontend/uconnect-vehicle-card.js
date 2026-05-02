@@ -25,11 +25,20 @@ const normalizeState = (stateObj) => {
   return String(raw).trim().toLowerCase();
 };
 
-const formatState = (stateObj) => {
+const formatState = (stateObj, hass) => {
   if (!stateObj) return "\u2014";
   const state = stateObj.state;
   if (state === "unknown" || state === "unavailable") return "\u2014";
   const unit = stateObj.attributes?.unit_of_measurement;
+  const num = Number(state);
+  if (Number.isFinite(num)) {
+    const entityId = stateObj.entity_id;
+    const precision = hass?.entities?.[entityId]?.display_precision;
+    if (precision !== undefined && precision !== null) {
+      const formatted = num.toFixed(precision);
+      return unit ? `${formatted} ${unit}` : `${formatted}`;
+    }
+  }
   return unit ? `${state} ${unit}` : `${state}`;
 };
 
@@ -644,13 +653,13 @@ class UconnectVehicleCard extends HTMLElement {
     const fuelValue = clamp(toNumberOrZero(read("fuel")), 0, 100);
 
     const primaryLevelValue = hasSoc ? socValue : hasFuel ? fuelValue : 0;
-    const primaryLevelLabel = hasSoc ? `${socValue}%` : hasFuel ? `${fuelValue}%` : "\u2014";
+    const primaryLevelLabel = hasSoc ? `${Math.round(socValue)}%` : hasFuel ? `${Math.round(fuelValue)}%` : "\u2014";
     const primaryLevelEntity = hasSoc ? (entities.soc || "") : hasFuel ? (entities.fuel || "") : "";
     const primaryLevelHasBar = hasSoc || hasFuel;
 
     const rangeState = hasRange ? read("range") : hasRangeTotal ? read("range_total") : null;
     const rangeEntity = hasRange ? (entities.range || "") : hasRangeTotal ? (entities.range_total || "") : "";
-    const rangeText = rangeState ? formatState(rangeState) : "\u2014";
+    const rangeText = rangeState ? formatState(rangeState, hass) : "\u2014";
     const rangeIcon = hasSoc ? "mdi:arrow-left-right" : "mdi:gas-station";
 
     // Indicators
@@ -832,13 +841,13 @@ class UconnectVehicleCard extends HTMLElement {
         {
           icon: "mdi:car-battery",
           label: "12V Battery",
-          value: formatState(read("battery_voltage")),
+          value: formatState(read("battery_voltage"), hass),
           entity: entities.battery_voltage || "",
         },
         {
           icon: "mdi:counter",
           label: "Odometer",
-          value: formatState(read("odometer")),
+          value: formatState(read("odometer"), hass),
           entity: entities.odometer || "",
         },
       ].filter((item) => item && firstDefined(item.entity, item.value) !== "");
