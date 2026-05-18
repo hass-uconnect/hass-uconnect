@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Final
+from datetime import datetime
+from typing import Any, Final
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -177,12 +178,15 @@ async def async_setup_entry(
     coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.unique_id
     ]
-    entities: list[UconnectBinarySensor] = []
+    entities: list[BinarySensorEntity] = []
 
     for vehicle in coordinator.client.vehicles.values():
         for description in SENSOR_DESCRIPTIONS:
             if getattr(vehicle, description.key, None) is not None:
                 entities.append(UconnectBinarySensor(coordinator, description, vehicle))
+
+        if vehicle.vin in coordinator.svla_data:
+            entities.append(UconnectStolenVehicleSensor(coordinator, vehicle))
 
     async_add_entities(entities)
 
@@ -232,3 +236,53 @@ class UconnectBinarySensor(BinarySensorEntity, UconnectEntity):
             if self.is_on
             else self.entity_description.off_icon or self.entity_description.on_icon
         )
+
+
+class UconnectStolenVehicleSensor(BinarySensorEntity, UconnectEntity):
+    """Uconnect Stolen Vehicle Locator sensor."""
+
+    def __init__(
+        self,
+        coordinator: UconnectDataUpdateCoordinator,
+        vehicle: Vehicle,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vehicle)
+
+        self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_svla"
+        self._attr_name = (
+            f"{vehicle.make} {vehicle.nickname or vehicle.model} Stolen Vehicle Status"
+        )
+        self._attr_device_class = BinarySensorDeviceClass.SAFETY
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the vehicle is reported stolen."""
+
+        data = self.coordinator.svla_data.get(self._vin)
+        if data is None:
+            return None
+
+        return data.get("svlaStatus")
+
+    @property
+    def icon(self) -> str:
+        """Return the icon to use in the frontend."""
+
+        return "mdi:shield-alert" if self.is_on else "mdi:shield-check"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return the activation timestamp if available."""
+
+        data = self.coordinator.svla_data.get(self._vin)
+        if data is None:
+            return None
+
+        ts = data.get("activationTimestamp")
+        if ts is not None and ts > 0:
+            return {
+                "activation_timestamp": datetime.fromtimestamp(ts / 1000).astimezone()
+            }
+
+        return None
