@@ -182,7 +182,7 @@ def async_unload_services(hass) -> None:
 
 
 def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
-    coordinators = list(hass.data[DOMAIN].keys())
+    coordinators = [k for k in hass.data[DOMAIN] if not k.startswith("_")]
 
     if len(coordinators) == 1:
         coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][coordinators[0]]
@@ -204,7 +204,7 @@ def _get_vin_from_device(hass: HomeAssistant, call: ServiceCall) -> str:
 def _get_coordinator_from_device(
     hass: HomeAssistant, call: ServiceCall
 ) -> UconnectDataUpdateCoordinator:
-    coordinators = list(hass.data[DOMAIN].keys())
+    coordinators = [k for k in hass.data[DOMAIN] if not k.startswith("_")]
 
     if len(coordinators) == 1:
         return hass.data[DOMAIN][coordinators[0]]
