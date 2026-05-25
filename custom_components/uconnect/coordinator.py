@@ -82,7 +82,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator):
             await self.hass.async_add_executor_job(self.client.refresh)
         except Exception as err:
             # On first run (no cached data), re-raise to signal setup failure
-            if self.data is None:
+            if self.data is None and not self.client.vehicles:
                 _LOGGER.error("Initial data fetch failed: %s", err)
                 raise
             # On subsequent runs, log and fall back to cached data
