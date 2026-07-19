@@ -130,8 +130,16 @@ class UconnectVehicleImage(UconnectEntity, ImageEntity):
         """Download image from URL."""
         try:
             session = async_get_clientsession(self.hass)
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/126.0.0.0 Safari/537.36"
+                ),
+                "Accept": "image/avif,image/webp,image/png,image/*,*/*",
+            }
             async with session.get(
-                url, timeout=aiohttp.ClientTimeout(total=30)
+                url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
             ) as resp:
                 if resp.status != 200:
                     _LOGGER.warning(
