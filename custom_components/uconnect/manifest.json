@@ -21,5 +21,5 @@
     "requirements": [
         "py-uconnect==0.4.6"
     ],
-    "version": "0.5.3"
+    "version": "0.5.4"
 }
