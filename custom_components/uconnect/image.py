@@ -53,12 +53,21 @@ async def async_setup_entry(
                     if isinstance(items, list) and items:
                         image_url = items[0].get("preciseImageURL")
             except Exception as err:
-                _LOGGER.error(
-                    "Error calling get_vehicle_image for %s: %s: %s",
-                    vehicle.vin,
-                    type(err).__name__,
-                    err,
-                )
+                response = getattr(err, "response", None)
+                status = getattr(response, "status_code", None)
+                if status in (400, 404):
+                    _LOGGER.debug(
+                        "Vehicle image unavailable for %s: HTTP %s",
+                        vehicle.vin,
+                        status,
+                    )
+                else:
+                    _LOGGER.error(
+                        "Error calling get_vehicle_image for %s: %s: %s",
+                        vehicle.vin,
+                        type(err).__name__,
+                        err,
+                    )
 
         if image_url:
             entities.append(UconnectVehicleImage(coordinator, vehicle, hass, image_url))
