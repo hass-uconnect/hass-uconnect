@@ -38,6 +38,6 @@ class UconnectEntity(CoordinatorEntity):
         return DeviceInfo(
             identifiers={(DOMAIN, self.vehicle.vin)},
             manufacturer=self.vehicle.make,
-            model=self.vehicle.model,
+            model=str(self.vehicle.model) if self.vehicle.model is not None else None,
             name=f"{self.vehicle.make} {self.vehicle.nickname or self.vehicle.model}",
         )
