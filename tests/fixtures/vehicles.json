@@ -1,0 +1,89 @@
+{
+  "userid": "0123456789abcdef0123456789abcdef",
+  "version": 1,
+  "vehicles": [
+    {
+      "vin": "ZFAEFAC39MX000001",
+      "nickname": "500",
+      "make": "FIAT",
+      "model": "500e",
+      "modelDescription": "Neuer 500",
+      "year": 2023,
+      "brandCode": "00",
+      "color": "ICE WHITE",
+      "fuelType": "E",
+      "market": "IT",
+      "language": "it",
+      "radio": "R1",
+      "sdp": "IGNITE",
+      "soldRegion": "EMEA",
+      "regStatus": "COMPLETED_STAGE_3",
+      "regTimestamp": "1700000000000",
+      "privacyMode": "INACTIVE",
+      "isPIMSVehicle": false,
+      "navEnabledHU": true,
+      "vehicleImageURL": "https://example.com/vehicle/500e.png",
+      "services": [
+        {"service": "RDL", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "RDU", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "VF", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROLIGHTS", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "CNOW2", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "DEEPREFRESH2", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROPRECOND", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROPRECOND_OFF", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROTRUNKUNLOCK", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "CPPLUSBEV", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "CSETTING2", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "SVLA", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ECALL", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROHVACON", "serviceEnabled": false, "vehicleCapable": true},
+        {"service": "REON", "serviceEnabled": true, "vehicleCapable": false}
+      ]
+    },
+    {
+      "vin": "1C4HJXEN5MW000002",
+      "nickname": "Wrangler",
+      "make": "JEEP",
+      "model": "JL",
+      "modelDescription": "Wrangler Unlimited Rubicon",
+      "year": 2021,
+      "brandCode": "57",
+      "color": "BLACK",
+      "fuelType": "G",
+      "market": "US",
+      "language": "en",
+      "radio": "R2",
+      "sdp": "SXM",
+      "soldRegion": "NAFTA",
+      "regStatus": "COMPLETED_STAGE_3",
+      "regTimestamp": "1600000000000",
+      "isPIMSVehicle": false,
+      "navEnabledHU": false,
+      "services": [
+        {"service": "REON", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "REOFF", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "RDL", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "RDU", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "HBLF", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROLIFTGATELOCK", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "ROLIFTGATEUNLOCK", "serviceEnabled": true, "vehicleCapable": true},
+        {"service": "VF", "serviceEnabled": "true", "vehicleCapable": "true"},
+        {"service": "TRIPREPORT", "serviceEnabled": true, "vehicleCapable": true}
+      ],
+      "vInfoTimestamp": 1738660000000,
+      "vehicleInfo": {
+        "odometer": {"odometer": {"unit": "mi", "value": "11990"}},
+        "fuel": {"distanceToEmpty": {"unit": "mi", "value": "400"}, "fuelAmountLevel": 50.0}
+      },
+      "location": {
+        "latitude": 42.3,
+        "longitude": -83.0,
+        "altitude": 180.0,
+        "bearing": 90.0,
+        "isLocationApprox": true,
+        "timeStamp": 1738660000000
+      }
+    }
+  ]
+}
