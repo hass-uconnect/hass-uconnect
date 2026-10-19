@@ -20,6 +20,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 _DATA_KEY = "_frontend_cards_setup"
+_RESOURCE_SCHEDULED_KEY = "_frontend_cards_resource_scheduled"
 _RESOURCE_ID_KEY = "_frontend_cards_resource_id"
 
 _STATIC_BASE_URL = "/uconnect/uconnect-vehicle-card.js"
@@ -84,11 +85,39 @@ async def _async_unregister_lovelace_resource(
 async def async_setup_frontend_cards(hass: HomeAssistant) -> None:
     """Set up websocket API and register the card JS as a Lovelace resource.
 
-    Safe to call multiple times across multiple config entries.
+    Safe to call multiple times across multiple config entries. The websocket
+    command and static path are registered once, the Lovelace resource again
+    after it was removed by unloading the last entry (e.g. on a reload).
     """
     domain_data = hass.data.setdefault(DOMAIN, {})
-    if domain_data.get(_DATA_KEY):
+    if not domain_data.get(_DATA_KEY):
+        await _async_register_static(hass)
+        domain_data[_DATA_KEY] = True
+
+    if domain_data.get(_RESOURCE_SCHEDULED_KEY):
         return
+    domain_data[_RESOURCE_SCHEDULED_KEY] = True
+
+    # Defer Lovelace resource registration until HA is fully started.
+    # During startup ResourceStorageCollection may not be loaded yet.
+    async def _register_resource(_event: Any = None) -> None:
+        resource_id = await _async_register_lovelace_resource(hass)
+        if resource_id:
+            domain_data[_RESOURCE_ID_KEY] = resource_id
+            _LOGGER.debug("Registered Lovelace resource %s", resource_id)
+        else:
+            _LOGGER.debug("Lovelace resource registration returned None")
+
+    if hass.state is CoreState.running:
+        _LOGGER.debug("HA running, registering Lovelace resource now")
+        await _register_resource()
+    else:
+        _LOGGER.debug("HA starting, deferring Lovelace resource registration")
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_resource)
+
+
+async def _async_register_static(hass: HomeAssistant) -> None:
+    """Register the websocket command and the card JS static path."""
 
     try:
         websocket_api.async_register_command(hass, websocket_vehicle_cards)
@@ -111,39 +140,17 @@ async def async_setup_frontend_cards(hass: HomeAssistant) -> None:
     except Exception as err:
         _LOGGER.debug("Unable to register static path: %s", err)
 
-    # Defer Lovelace resource registration until HA is fully started.
-    # During startup ResourceStorageCollection may not be loaded yet.
-    async def _register_resource(_event: Any = None) -> None:
-        resource_id = await _async_register_lovelace_resource(hass)
-        if resource_id:
-            domain_data[_RESOURCE_ID_KEY] = resource_id
-            _LOGGER.debug("Registered Lovelace resource %s", resource_id)
-        else:
-            _LOGGER.debug("Lovelace resource registration returned None")
-
-    if hass.state is CoreState.running:
-        _LOGGER.debug("HA running, registering Lovelace resource now")
-        await _register_resource()
-    else:
-        _LOGGER.debug("HA starting, deferring Lovelace resource registration")
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_resource)
-
-    domain_data[_DATA_KEY] = True
-
 
 async def async_unload_frontend_cards_if_last_entry(
     hass: HomeAssistant,
 ) -> None:
-    """Remove the Lovelace resource if no Uconnect entries remain."""
+    """Remove the Lovelace resource, called when no Uconnect entries remain."""
     domain_data: dict[str, Any] | None = hass.data.get(DOMAIN)
     if not domain_data:
         return
 
-    remaining_entries = [k for k in domain_data if not k.startswith("_")]
-    if remaining_entries:
-        return
-
-    resource_id = domain_data.get(_RESOURCE_ID_KEY)
+    domain_data.pop(_RESOURCE_SCHEDULED_KEY, None)
+    resource_id = domain_data.pop(_RESOURCE_ID_KEY, None)
     if isinstance(resource_id, str) and resource_id:
         await _async_unregister_lovelace_resource(hass, resource_id)
 
@@ -158,11 +165,14 @@ def _build_unique_id_map(hass: HomeAssistant) -> dict[str, str]:
 
         registry = er.async_get(hass)
         mapping: dict[str, str] = {}
-        for entry in registry.entities.values():
-            if getattr(entry, "platform", None) != DOMAIN:
-                continue
-            if entry.unique_id and entry.entity_id:
-                mapping[entry.unique_id] = entry.entity_id
+        for config_entry in hass.config_entries.async_entries(DOMAIN):
+            for entry in er.async_entries_for_config_entry(
+                registry, config_entry.entry_id
+            ):
+                if entry.platform != DOMAIN:
+                    continue
+                if entry.unique_id and entry.entity_id:
+                    mapping[entry.unique_id] = entry.entity_id
         return mapping
     except Exception:
         return {}
@@ -183,8 +193,14 @@ def _build_vehicle_list(hass: HomeAssistant) -> list[dict[str, Any]]:
     dev_reg = dr.async_get(hass)
     unique_id_map = _build_unique_id_map(hass)
 
+    devices = {
+        device.id: device
+        for config_entry in hass.config_entries.async_entries(DOMAIN)
+        for device in dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id)
+    }
+
     vehicles: list[dict[str, Any]] = []
-    for device in dev_reg.devices.values():
+    for device in devices.values():
         vin = _normalize_vin_from_identifiers(device.identifiers)
         if not vin:
             continue
@@ -216,6 +232,10 @@ def _build_vehicle_list(hass: HomeAssistant) -> list[dict[str, Any]]:
             ("trunk", "trunk_locked"),
             ("window_driver", "window_driver_closed"),
             ("window_passenger", "window_passenger_closed"),
+            ("window_rear_left", "window_rear_left_closed"),
+            ("window_rear_right", "window_rear_right_closed"),
+            ("sunroof", "sunroof_closed"),
+            ("liftgate", "liftgate_locked"),
             ("tire_fl", "wheel_front_left_pressure"),
             ("tire_fr", "wheel_front_right_pressure"),
             ("tire_rl", "wheel_rear_left_pressure"),

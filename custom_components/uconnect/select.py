@@ -1,56 +1,51 @@
 """Select for Uconnect integration."""
 
 from __future__ import annotations
+
 import logging
 
-from homeassistant.core import HomeAssistant
 from homeassistant.components.select import SelectEntity
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from py_uconnect import ChargingLevel, Vehicle
 
-from py_uconnect.client import Vehicle
-from py_uconnect.api import (
-    CHARGING_LEVELS,
-    CHARGING_LEVEL_ONE,
-    CHARGING_LEVEL_TWO,
-    CHARGING_LEVEL_THREE,
-    CHARGING_LEVEL_FOUR,
-    CHARGING_LEVEL_FIVE,
-)
-
-from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
-from .coordinator import UconnectDataUpdateCoordinator
-from .entity import UconnectEntity
+from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
+from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
+from .entity import UconnectEntity, should_add, vehicle_name
 
 _LOGGER = logging.getLogger(__name__)
 
-CHARGING_LEVEL_NAMES = [x.name for x in CHARGING_LEVELS]
+CHARGING_LEVEL_NAMES = [x.value for x in ChargingLevel]
 
 ICONS = {
-    CHARGING_LEVEL_ONE.name: "mdi:battery-charging-20",
-    CHARGING_LEVEL_TWO.name: "mdi:battery-charging-40",
-    CHARGING_LEVEL_THREE.name: "mdi:battery-charging-60",
-    CHARGING_LEVEL_FOUR.name: "mdi:battery-charging-80",
-    CHARGING_LEVEL_FIVE.name: "mdi:battery-charging-100",
+    ChargingLevel.LEVEL_ONE: "mdi:battery-charging-20",
+    ChargingLevel.LEVEL_TWO: "mdi:battery-charging-40",
+    ChargingLevel.LEVEL_THREE: "mdi:battery-charging-60",
+    ChargingLevel.LEVEL_FOUR: "mdi:battery-charging-80",
+    ChargingLevel.LEVEL_FIVE: "mdi:battery-charging-100",
 }
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     # Do not add entities if not configured
     if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
         return
 
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.unique_id
-    ]
+    coordinator = config_entry.runtime_data
     entities: list[UconnectSelectSetChargingLevel] = []
     for vehicle in coordinator.client.vehicles.values():
-        if getattr(vehicle, "charging_level_preference", None) is not None:
+        if should_add(
+            hass,
+            Platform.SELECT,
+            f"{DOMAIN}_{vehicle.vin}_charging_level_preference",
+            vehicle.charging_level_preference is not None,
+        ):
             entities.append(UconnectSelectSetChargingLevel(coordinator, vehicle))
 
     async_add_entities(entities)
@@ -65,9 +60,7 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_charging_level_preference"
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} Charging Level Pref"
-        )
+        self._attr_name = f"{vehicle_name(vehicle)} Charging Level Pref"
 
     @property
     def icon(self):
@@ -79,7 +72,8 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
 
     @property
     def current_option(self):
-        return self.vehicle.charging_level_preference
+        level = self.vehicle.charging_level_preference
+        return level.value if level is not None else None
 
     async def async_select_option(self, option: str) -> None:
         try:

@@ -43,6 +43,14 @@ hvac_on:
       selector:
         device:
           integration: uconnect
+    temperature:
+      required: false
+      selector:
+        number:
+          min: 15
+          max: 90
+          step: 0.5
+          mode: box
 hvac_off:
   fields:
     device_id:
@@ -186,3 +194,31 @@ set_charge_schedule:
       required: true
       selector:
         object:
+
+send_destination:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+    latitude:
+      required: true
+      selector:
+        number:
+          min: -90
+          max: 90
+          step: any
+          mode: box
+    longitude:
+      required: true
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: any
+          mode: box
+    name:
+      required: false
+      selector:
+        text:

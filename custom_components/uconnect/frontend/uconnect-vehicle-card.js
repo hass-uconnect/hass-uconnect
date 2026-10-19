@@ -620,22 +620,27 @@ class UconnectVehicleCard extends HTMLElement {
 
     // Uconnect binary sensors use postprocess inversion:
     //   off = locked/closed (secure), on = unlocked/open (not secure)
-    const doorDriverLocked = hasUsableState(read("door_driver")) && !isOnState(read("door_driver"));
-    const doorPassengerLocked = hasUsableState(read("door_passenger")) && !isOnState(read("door_passenger"));
-    const doorRearLeftLocked = hasUsableState(read("door_rear_left")) && !isOnState(read("door_rear_left"));
-    const doorRearRightLocked = hasUsableState(read("door_rear_right")) && !isOnState(read("door_rear_right"));
-    const allDoorsLocked = doorDriverLocked && doorPassengerLocked && doorRearLeftLocked && doorRearRightLocked;
+    // Sensors without a usable state (e.g. rear doors of a two-door car, which
+    // the vehicle reports as not available) are left out.
+    const secureStates = (keys) => keys
+      .map((key) => read(key))
+      .filter((s) => hasUsableState(s))
+      .map((s) => !isOnState(s));
+
+    const doorStates = secureStates(["door_driver", "door_passenger", "door_rear_left", "door_rear_right"]);
+    const allDoorsLocked = doorStates.length > 0 && doorStates.every(Boolean);
     const anyDoorEntity = entities.door_driver || entities.door_passenger || "";
 
-    const windowDriverClosed = hasUsableState(read("window_driver")) && !isOnState(read("window_driver"));
-    const windowPassengerClosed = hasUsableState(read("window_passenger")) && !isOnState(read("window_passenger"));
-    const allWindowsClosed = windowDriverClosed && windowPassengerClosed;
-    const openWindows = [read("window_driver"), read("window_passenger")]
-      .filter((s) => hasUsableState(s) && isOnState(s)).length;
+    const windowStates = secureStates(["window_driver", "window_passenger", "window_rear_left", "window_rear_right", "sunroof"]);
+    const allWindowsClosed = windowStates.length > 0 && windowStates.every(Boolean);
+    const openWindows = windowStates.filter((closed) => !closed).length;
     const windowEntity = entities.window_driver || entities.window_passenger || "";
 
-    const trunkLocked = hasUsableState(read("trunk")) && !isOnState(read("trunk"));
-    const trunkEntity = entities.trunk || "";
+    // Vehicles have either a trunk or a liftgate
+    const trunkKey = entities.trunk ? "trunk" : "liftgate";
+    const trunkName = trunkKey === "trunk" ? "Trunk" : "Liftgate";
+    const trunkLocked = hasUsableState(read(trunkKey)) && !isOnState(read(trunkKey));
+    const trunkEntity = entities[trunkKey] || "";
 
     const chargingActive = isOnState(read("charging"));
     const pluggedIn = isOnState(read("plugged_in"));
@@ -679,9 +684,9 @@ class UconnectVehicleCard extends HTMLElement {
         },
         {
           icon: "mdi:lock",
-          stateClass: trunkLocked ? "ok" : hasUsableState(read("trunk")) ? "alert" : "",
+          stateClass: trunkLocked ? "ok" : hasUsableState(read(trunkKey)) ? "alert" : "",
           entity: trunkEntity,
-          title: trunkLocked ? "Trunk: Locked" : "Trunk: Unlocked",
+          title: trunkLocked ? `${trunkName}: Locked` : `${trunkName}: Unlocked`,
         },
         {
           icon: "mdi:ev-station",

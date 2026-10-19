@@ -1,22 +1,22 @@
 """Switches for Uconnect integration."""
 
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Final, Callable
-
 import logging
+from typing import Final
 
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.switch import (
     SwitchDeviceClass,
-    SwitchEntityDescription,
     SwitchEntity,
+    SwitchEntityDescription,
 )
-
-from py_uconnect.client import Vehicle
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from py_uconnect import Vehicle
 from py_uconnect.command import (
     COMMAND_CHARGE,
     COMMAND_COMFORT_OFF,
@@ -32,9 +32,9 @@ from py_uconnect.command import (
     Command,
 )
 
-from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
-from .coordinator import UconnectDataUpdateCoordinator
-from .entity import UconnectEntity
+from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
+from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
+from .entity import UconnectEntity, should_add, vehicle_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,6 +75,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
         on_icon="mdi:hvac",
         command_on=COMMAND_HVAC_ON,
         command_off=COMMAND_HVAC_OFF,
+        is_on=lambda x: x.hvac_on,
         device_class=SwitchDeviceClass.SWITCH,
     ),
     UconnectSwitchEntityDescription(
@@ -101,6 +102,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
         off_icon="mdi:lock-open",
         command_on=COMMAND_TRUNK_LOCK,
         command_off=COMMAND_TRUNK_UNLOCK,
+        is_on=lambda x: x.trunk_locked,
         device_class=SwitchDeviceClass.SWITCH,
     ),
 )
@@ -108,30 +110,28 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
-):
+) -> None:
     # Do not add entities if not configured
     if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
         return
 
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.unique_id
-    ]
+    coordinator = config_entry.runtime_data
     entities: list[UconnectSwitch] = []
 
     for vehicle in coordinator.client.vehicles.values():
         for description in SWITCH_DESCRIPTIONS:
-            if (
-                (
-                    description.command_on is not None
-                    and description.command_on.name in vehicle.supported_commands
-                )
-                or (
-                    description.command_off is not None
-                    and description.command_off.name in vehicle.supported_commands
-                )
-            ) and description.is_available(vehicle):
+            supported = description.is_available(vehicle) and any(
+                cmd is not None and vehicle.supports(cmd)
+                for cmd in (description.command_on, description.command_off)
+            )
+            if should_add(
+                hass,
+                Platform.SWITCH,
+                f"{DOMAIN}_{vehicle.vin}_{description.key}",
+                supported,
+            ):
                 entities.append(UconnectSwitch(coordinator, description, vehicle))
 
     async_add_entities(entities)
@@ -147,9 +147,7 @@ class UconnectSwitch(SwitchEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self.entity_description: UconnectSwitchEntityDescription = description
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
-        )
+        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
 
     @property

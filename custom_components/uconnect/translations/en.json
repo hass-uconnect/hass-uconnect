@@ -19,10 +19,12 @@
             }
         },
         "abort": {
-            "already_configured": "Device is already configured"
+            "already_configured": "Device is already configured",
+            "reauth_successful": "Re-authentication was successful"
         },
         "error": {
             "invalid_auth": "The login failed to the Uconnect servers. Double check your vehicle doesn't use SiriusXM Guardian and your credentials are correct.",
+            "cannot_connect": "Unable to connect to the Uconnect servers. Try again later.",
             "unknown": "Unexpected error"
         }
     },
@@ -92,11 +94,15 @@
         },
         "hvac_on": {
             "name": "HVAC - Turn On",
-            "description": "Turn on the AC",
+            "description": "Turn on the AC, optionally with a target temperature",
             "fields": {
                 "device_id": {
                     "name": "Vehicle",
                     "description": "Target vehicle"
+                },
+                "temperature": {
+                    "name": "Temperature",
+                    "description": "Target cabin temperature, in the unit configured in Home Assistant. Only for vehicles supporting it"
                 }
             }
         },
@@ -280,7 +286,29 @@
                 },
                 "schedule": {
                     "name": "Schedule",
-                    "description": "Charge schedule as a JSON object"
+                    "description": "The schedules: a list, or an object holding them like the schedules attribute of the Charge Schedule sensor"
+                }
+            }
+        },
+        "send_destination": {
+            "name": "Send Destination",
+            "description": "Send a destination to the vehicle navigation system",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                },
+                "latitude": {
+                    "name": "Latitude",
+                    "description": "Latitude of the destination"
+                },
+                "longitude": {
+                    "name": "Longitude",
+                    "description": "Longitude of the destination"
+                },
+                "name": {
+                    "name": "Name",
+                    "description": "Name of the destination shown in the vehicle"
                 }
             }
         }
