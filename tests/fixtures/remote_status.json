@@ -1,0 +1,22 @@
+{
+  "timestamp": 1738660300000,
+  "vehicleType": "_4DS",
+  "doors": {
+    "driver": {"status": "LOCKED"},
+    "passenger": {"status": "LOCKED"},
+    "leftRear": {"status": "UNLOCKED"},
+    "rightRear": {"status": "NA"}
+  },
+  "windows": {
+    "driver": {"status": "CLOSED"},
+    "passenger": {"status": "OPENED", "rate": 20},
+    "leftRear": {"status": "CLOSED"},
+    "rightRear": {"status": "CLOSED"},
+    "sunroof": {"status": "NA"}
+  },
+  "trunk": {"status": "LOCKED"},
+  "liftGate": {"status": "UNLOCKED"},
+  "engine": {"status": "OFF"},
+  "evRunning": {"status": "OFF"},
+  "hvac": {"status": "ON", "temperature": {"unit": "C", "value": 21.5}}
+}

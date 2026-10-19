@@ -2,29 +2,31 @@
 
 from __future__ import annotations
 
-from py_uconnect.client import Vehicle
-
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from py_uconnect import Vehicle
 
 from .const import DOMAIN
-from .coordinator import UconnectDataUpdateCoordinator
-from .entity import UconnectEntity
+from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
+from .entity import UconnectEntity, should_add, vehicle_name
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.unique_id
-    ]
+    coordinator = config_entry.runtime_data
     entities = []
     for vehicle in coordinator.client.vehicles.values():
-        if vehicle.location is not None:
+        if should_add(
+            hass,
+            Platform.DEVICE_TRACKER,
+            f"{DOMAIN}_{vehicle.vin}_location",
+            vehicle.location is not None,
+        ):
             entities.append(UconnectTracker(coordinator, vehicle))
 
     async_add_entities(entities)
@@ -38,7 +40,7 @@ class UconnectTracker(TrackerEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_location"
-        self._attr_name = f"{vehicle.make} {vehicle.nickname or vehicle.model} Location"
+        self._attr_name = f"{vehicle_name(vehicle)} Location"
         self._attr_icon = "mdi:map-marker-outline"
 
     @property

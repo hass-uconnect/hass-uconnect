@@ -46,14 +46,14 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
 - Multiple Regions: America, Canada, Europe & Asia
 - Supports multiple cars on the same account 🚙🚗🚕
 - Location tracking 🌍
-- Live vehicle status such as windows/doors, and ignition status for supported vehicles
+- Live vehicle status such as doors, windows, sunroof, trunk/liftgate, climate (on/off and cabin temperature) and ignition, for supported vehicles. States the vehicle reports as not available are shown as unknown
 - Home Assistant zones (home 🏠, work 🏦 etc.) support
 - Uses the same data source as the official app 📱
 - Remote commands (unlock doors 🚪, switch HVAC 🧊 on , ...). **Use a service (action) to trigger commands**. Some commands may not work with all vehicles
-- Available commands are:
+- Available commands are (each action is only offered when one of your vehicles supports it):
   - `Refresh Location`: Updates the vehicle location
   - `Deep Refresh`: Refreshes EV battery level
-  - `Deep Refresh (V2)`: Refreshes EV battery level using V2 API
+  - `Deep Refresh (V2)`: Refreshes EV battery level using V2 API. Not needed normally: `Deep Refresh` uses V2 by itself for the vehicles that need it
   - `Lights/Horn`: Trigger vehicle horn and lights
   - `Lights`: Trigger vehicle lights
   - `Preconditioning On/Off`: Toggle vehicle preconditioning
@@ -61,10 +61,11 @@ US, Canada, EU & Asia regions are supported. Try a different region if the origi
   - `Doors Lock/Unlock`: Lock/Unlock vehicle doors
   - `Engine On/Off`: Remotely starts/stops the vehicle engine
   - `Cabin Ventilation`: Activates cabin ventilation
-  - `Set Charge Schedule`: Sets the EV charge schedule (accepts a JSON object)
+  - `Set Charge Schedule`: Sets the EV charge and climate schedules. Takes the list of schedules, e.g. the `schedules` attribute of the `Charge Schedule` sensor with your changes, or an object holding them as returned by the API
   - `Charge Now`: Initiates EV charging
-  - `Charge Now (V4)`: Initiates EV charging using V4 API
-  - `HVAC On/Off`: Toggles the HVAC
+  - `Charge Now (V4)`: Initiates EV charging using V4 API. Not needed normally: `Charge Now` uses V4 by itself for the vehicles that need it
+  - `HVAC On/Off`: Toggles the HVAC. `HVAC On` optionally takes a target `temperature`, in the unit configured in Home Assistant, for vehicles supporting it
+  - `Send Destination`: Sends a destination (`latitude`, `longitude` and an optional `name`) to the vehicle navigation system
   - `Comfort On/Off`: Another alternative to the above HVAC commands (depends on make/model)
   - `Update`: Asks the integration to update the data from the API immediately
 
@@ -107,6 +108,8 @@ issue with your vehicle year, make, model, and whether it shows in the official 
 - Go to your integrations configuration page once started and add the Uconnect integration
 - Fill e-mail, password and optionally PIN if you want to issue commands
 
+If the login is rejected when the integration starts (e.g. after a password change), Home Assistant asks you to re-authenticate. Errors after a successful start are treated as temporary: they are logged and the last known data is kept.
+
 After the integration is initialized - you might want to go into its options and enable the creation of command entities:
 
 ![image](https://github.com/user-attachments/assets/587c9ec0-bbd0-4918-b84b-4235316a58cf)
@@ -123,7 +126,7 @@ The options are:
 The integration includes a custom Lovelace card (`custom:uconnect-vehicle-card`) that is automatically registered on setup. It shows:
 
 - **Header**: Vehicle name and VIN (or custom license plate)
-- **Indicators**: Doors, windows, trunk, charging status, ignition
+- **Indicators**: Doors, windows (including the rear ones and the sunroof), trunk or liftgate, charging status, ignition
 - **SOC/Fuel bar**: Battery percentage with charging animation, range value
 - **Vehicle image**: From the image entity (if available)
 - **Mini map**: Live location from the device tracker
@@ -143,3 +146,15 @@ Card configuration options (all toggleable):
 Cards:
   - [Ultra Card](https://github.com/WJDDesigns/Ultra-Card)
   - [Vehicle Status Card](https://github.com/ngocjohn/vehicle-status-card)
+
+## Development
+
+The tests use [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component), which needs the Python version of the current Home Assistant release (3.14):
+
+```sh
+python3.14 -m venv .venv && . .venv/bin/activate
+pip install -r requirements_test.txt
+ruff check . && ruff format --check . && pytest
+```
+
+The [py-uconnect](https://github.com/hass-uconnect/py-uconnect) library does the communication with the Uconnect cloud.

@@ -1,19 +1,19 @@
 """Buttons for Uconnect integration."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Final
 
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.button import (
     ButtonDeviceClass,
-    ButtonEntityDescription,
     ButtonEntity,
+    ButtonEntityDescription,
 )
-
-from py_uconnect.client import Vehicle
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from py_uconnect import Vehicle
 from py_uconnect.command import (
     COMMAND_CHARGE,
     COMMAND_DEEP_REFRESH,
@@ -23,9 +23,9 @@ from py_uconnect.command import (
     Command,
 )
 
-from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
-from .coordinator import UconnectDataUpdateCoordinator
-from .entity import UconnectEntity
+from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
+from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
+from .entity import UconnectEntity, should_add, vehicle_name
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -76,17 +76,22 @@ BUTTON_DESCRIPTIONS: Final[tuple[UconnectButtonEntityDescription, ...]] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.unique_id
-    ]
+    coordinator = config_entry.runtime_data
     entities: list[ButtonEntity] = []
 
-    # EV-specific buttons (always available)
+    def add(vin: str, key: str, supported: bool) -> bool:
+        return should_add(hass, Platform.BUTTON, f"{DOMAIN}_{vin}_{key}", supported)
+
+    # EV-specific buttons (always available), for the vehicles which get an
+    # extrapolated SOC sensor. The sensor platform may not be set up yet, so
+    # the condition is checked rather than the sensors.
     for vehicle in coordinator.client.vehicles.values():
-        if vehicle.vin in coordinator.extrapolated_soc_sensors:
+        if add(
+            vehicle.vin, "reset_battery_learning", vehicle.state_of_charge is not None
+        ):
             entities.append(UconnectResetLearningButton(coordinator, vehicle))
 
     # Command entities (gated behind option)
@@ -95,9 +100,10 @@ async def async_setup_entry(
             entities.append(UconnectButtonUpdate(coordinator, vehicle))
 
             for description in BUTTON_DESCRIPTIONS:
-                if (
-                    description.command is not None
-                    and description.command.name in vehicle.supported_commands
+                if description.command is not None and add(
+                    vehicle.vin,
+                    description.key,
+                    vehicle.supports(description.command),
                 ):
                     entities.append(UconnectButton(coordinator, description, vehicle))
 
@@ -114,9 +120,7 @@ class UconnectButton(ButtonEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self.entity_description: UconnectButtonEntityDescription = description
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
-        )
+        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
 
     @property
@@ -137,9 +141,7 @@ class UconnectButtonUpdate(ButtonEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} Update Data"
-        )
+        self._attr_name = f"{vehicle_name(vehicle)} Update Data"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_update"
 
     @property
@@ -160,9 +162,7 @@ class UconnectResetLearningButton(ButtonEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} Reset Battery Learning"
-        )
+        self._attr_name = f"{vehicle_name(vehicle)} Reset Battery Learning"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_reset_battery_learning"
         self._attr_icon = "mdi:head-sync-outline"
 

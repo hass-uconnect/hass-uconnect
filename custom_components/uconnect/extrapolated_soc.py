@@ -6,11 +6,12 @@ from the vehicle, based on charging status and time-to-full estimates.
 
 from __future__ import annotations
 
-import logging
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from datetime import UTC, datetime, timedelta
+import logging
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -25,12 +26,11 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.restore_state import RestoreEntity
-
-from py_uconnect.client import Vehicle
+from py_uconnect import Vehicle
 from py_uconnect.command import COMMAND_DEEP_REFRESH
 
 from .const import DOMAIN
-from .coordinator import UconnectDataUpdateCoordinator
+from .coordinator import UconnectCommandTimeout, UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class SocEstimationState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SocEstimationState":
+    def from_dict(cls, data: dict[str, Any]) -> SocEstimationState:
         """Create state from dictionary.
 
         Validates types to handle corrupted state gracefully.
@@ -142,7 +142,7 @@ class SocEstimationState:
             try:
                 parsed = datetime.fromisoformat(last_time)
                 if parsed.tzinfo is None:
-                    parsed = parsed.replace(tzinfo=timezone.utc)
+                    parsed = parsed.replace(tzinfo=UTC)
                 last_time_parsed = parsed
             except ValueError:
                 pass
@@ -384,7 +384,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             # unanswered needs another: the status poll gives up after a
             # minute, which the vehicle can outlast, so a slow but successful
             # refresh would be wasted
-            if not isinstance(err, HomeAssistantError):
+            if isinstance(err, UconnectCommandTimeout) or not isinstance(
+                err, HomeAssistantError
+            ):
                 await self.coordinator.async_request_refresh()
 
     def _can_deep_refresh(self) -> bool:
@@ -476,7 +478,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         ignition_on = getattr(self.vehicle, "ignition_on", False) or False
         time_to_full = vehicle_time_to_full(self.vehicle)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Track if we're skipping due to stale charging data
         skip_stale_charging_data = False
@@ -853,7 +855,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_vehicle_soc is None:
             return None
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         elapsed_hours = self._get_elapsed_hours(now)
 
         # Guard against missing timestamp or negative elapsed time (clock drift)
@@ -961,7 +963,7 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
             self.async_write_ha_state()
             return
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         self._soc_history.append((now, current_soc))
 
         # Trim entries outside the sliding window
@@ -994,7 +996,7 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         if self._observed_rate is None or self._observed_rate_time is None:
             return False
 
-        age = datetime.now(timezone.utc) - self._observed_rate_time
+        age = datetime.now(UTC) - self._observed_rate_time
         return age <= CHARGING_RATE_WINDOW
 
     @property

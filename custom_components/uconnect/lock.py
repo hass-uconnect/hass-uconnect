@@ -1,26 +1,23 @@
 """Lock for Uconnect integration."""
 
 from __future__ import annotations
-import logging
-from dataclasses import dataclass
-from typing import Callable, Final
 
-from homeassistant.core import HomeAssistant
+from collections.abc import Callable
+from dataclasses import dataclass
+import logging
+from typing import Final
+
 from homeassistant.components.lock import LockEntity, LockEntityDescription
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from py_uconnect import Command, Vehicle
+from py_uconnect.command import COMMAND_DOORS_LOCK, COMMAND_DOORS_UNLOCK
 
-from py_uconnect.client import Vehicle
-from py_uconnect.command import (
-    COMMAND_DOORS_LOCK,
-    COMMAND_DOORS_UNLOCK,
-    Command,
-)
-
-from .const import DOMAIN, CONF_ADD_COMMAND_ENTITIES
-from .coordinator import UconnectDataUpdateCoordinator
-from .entity import UconnectEntity
+from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
+from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
+from .entity import UconnectEntity, should_add, vehicle_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,28 +48,26 @@ LOCK_DESCRIPTIONS: Final[tuple[UconnectLockEntityDescription, ...]] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     # Do not add entities if not configured
     if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
         return
 
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.unique_id
-    ]
+    coordinator = config_entry.runtime_data
     entities: list[UconnectLock] = []
     for vehicle in coordinator.client.vehicles.values():
         for description in LOCK_DESCRIPTIONS:
-            if description.is_locked is not None and (
-                (
-                    description.command_on is not None
-                    and description.command_on.name in vehicle.supported_commands
-                )
-                or (
-                    description.command_off is not None
-                    and description.command_off.name in vehicle.supported_commands
-                )
+            supported = any(
+                cmd is not None and vehicle.supports(cmd)
+                for cmd in (description.command_on, description.command_off)
+            )
+            if should_add(
+                hass,
+                Platform.LOCK,
+                f"{DOMAIN}_{vehicle.vin}_{description.key}",
+                supported,
             ):
                 entities.append(UconnectLock(coordinator, description, vehicle))
 
@@ -90,9 +85,7 @@ class UconnectLock(LockEntity, UconnectEntity):
 
         self.entity_description: UconnectLockEntityDescription = description
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} {description.name}"
-        )
+        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
 
     @property
     def icon(self):

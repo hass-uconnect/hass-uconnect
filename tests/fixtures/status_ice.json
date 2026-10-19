@@ -1,0 +1,33 @@
+{
+  "timestamp": 1738661000000,
+  "vehicleInfo": {
+    "batteryInfo": {
+      "batteryStateOfCharge": "LOW",
+      "batteryStatus": "1",
+      "batteryVoltage": {"unit": "volts", "value": "12.1"}
+    },
+    "daysToService": "null",
+    "distanceToService": {"distanceToService": {"unit": "mi", "value": "2500"}},
+    "estRange": 410,
+    "fuel": {
+      "distanceToEmpty": {"unit": "mi", "value": "410"},
+      "fuelAmountLevel": 52.5,
+      "isFuelLevelLow": false
+    },
+    "odometer": {"odometer": {"unit": "mi", "value": "12000.4"}},
+    "oilLevel": {"oilLevel": 80},
+    "timestamp": 1738661000000,
+    "tripsInfo": {"trips": []},
+    "tyrePressure": [
+      {"type": "FL", "pressure": {"unit": "psi", "value": "36"}, "warning": false},
+      {"type": "FR", "pressure": {"unit": "psi", "value": "35"}, "warning": false},
+      {"type": "RL", "pressure": {"unit": "psi", "value": "28"}, "warning": true},
+      {"type": "RR", "pressure": {"unit": "psi", "value": "36"}, "warning": false}
+    ],
+    "wheelCount": 4
+  },
+  "evInfo": {
+    "chargePowerPreference": "NOT_USED_VALUE",
+    "ignitionStatus": "ON"
+  }
+}

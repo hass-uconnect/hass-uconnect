@@ -1,0 +1,71 @@
+{
+  "timestamp": 1738660203634,
+  "vehicleInfo": {
+    "batteryInfo": {
+      "batteryStateOfCharge": "NORMAL",
+      "batteryStatus": "0",
+      "batteryVoltage": {"unit": "volts", "value": "14.875"}
+    },
+    "daysToService": "325",
+    "distanceToService": {"distanceToService": {"unit": "km", "value": "13159.0"}},
+    "fuel": {"distanceToEmpty": {"unit": "km", "value": null}, "fuelAmountLevel": null},
+    "isTPMSVehicle": true,
+    "odometer": {"odometer": {"unit": "km", "value": "1841"}},
+    "oilLevel": {"oilLevel": null},
+    "timestamp": 1738660203634,
+    "tripsInfo": {"trips": []},
+    "tyrePressure": [
+      {"type": "FL", "pressure": {"unit": "kPa", "value": "250"}, "status": "NORMAL", "warning": false},
+      {"type": "FR", "pressure": {"unit": "kPa", "value": "252"}, "status": "NORMAL", "warning": false},
+      {"type": "RL", "pressure": {"unit": "kPa", "value": "240"}, "status": "NORMAL", "warning": false},
+      {"type": "RR", "pressure": {"unit": "kPa", "value": null}, "status": "NORMAL", "warning": false}
+    ],
+    "wheelCount": 4
+  },
+  "evInfo": {
+    "battery": {
+      "chargingLevel": "LEVEL_2",
+      "chargingStatus": "CHARGING",
+      "distanceToEmpty": {"unit": "km", "value": "134"},
+      "plugInStatus": true,
+      "stateOfCharge": 63.0,
+      "timeToFullyChargeL1": -1,
+      "timeToFullyChargeL2": 96,
+      "timeToFullyChargeL3": 41,
+      "totalRange": 134
+    },
+    "chargePowerPreference": "LEVEL_FIVE",
+    "chargeScheduleAdditionalInfo": {"cabinCond": true, "headSeat": false},
+    "chargeSchedulesV3": [
+      {
+        "scheduleType": "CHARGE",
+        "startTime": "01:00",
+        "endTime": "05:00",
+        "chargeToFull": false,
+        "enableScheduleType": true,
+        "repeatSchedule": true,
+        "scheduledDays": {
+          "monday": true, "tuesday": true, "wednesday": true, "thursday": true,
+          "friday": true, "saturday": false, "sunday": false
+        },
+        "targetSoc": 80
+      },
+      {
+        "scheduleType": "CLIMATE",
+        "startTime": "07:30",
+        "endTime": "07:45",
+        "chargeToFull": false,
+        "enableScheduleType": false,
+        "repeatSchedule": true,
+        "scheduledDays": {
+          "monday": true, "tuesday": true, "wednesday": true, "thursday": true,
+          "friday": true, "saturday": false, "sunday": false
+        },
+        "climateParameters": "ONLY_IF_PLUGGED_IN",
+        "climateSettings": {"celsius": 21.0}
+      }
+    ],
+    "ignitionStatus": "OFF",
+    "timestamp": 1738660203634
+  }
+}

@@ -6,73 +6,67 @@ import logging
 from pathlib import Path
 
 import aiohttp
-
 from homeassistant.components.image import ImageEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
-
-from py_uconnect.client import Vehicle
+from py_uconnect import APIError, UconnectError, Vehicle
 
 from .const import DOMAIN
-from .coordinator import UconnectDataUpdateCoordinator
-from .entity import UconnectEntity
+from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
+from .entity import UconnectEntity, vehicle_name
 
-_LOGGER = logging.getLogger(DOMAIN)
+_LOGGER = logging.getLogger(__name__)
 
 CACHE_DIR = ".storage/uconnect"
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Uconnect image entities."""
-    coordinator: UconnectDataUpdateCoordinator = hass.data[DOMAIN][
-        config_entry.unique_id
-    ]
+    coordinator = config_entry.runtime_data
 
     entities = []
-    for vehicle in coordinator.client.get_vehicles().values():
-        image_url = getattr(vehicle, "image_url", None)
-
-        if not image_url:
-            # Try the dedicated image API endpoint
-            try:
-                result = await hass.async_add_executor_job(
-                    coordinator.client.get_vehicle_image, vehicle.vin
-                )
-                _LOGGER.debug(
-                    "get_vehicle_image response for %s: %s", vehicle.vin, result
-                )
-                if isinstance(result, dict):
-                    items = result.get("items")
-                    if isinstance(items, list) and items:
-                        image_url = items[0].get("preciseImageURL")
-            except Exception as err:
-                response = getattr(err, "response", None)
-                status = getattr(response, "status_code", None)
-                if status in (400, 404):
-                    _LOGGER.debug(
-                        "Vehicle image unavailable for %s: HTTP %s",
-                        vehicle.vin,
-                        status,
-                    )
-                else:
-                    _LOGGER.error(
-                        "Error calling get_vehicle_image for %s: %s: %s",
-                        vehicle.vin,
-                        type(err).__name__,
-                        err,
-                    )
+    for vehicle in coordinator.client.vehicles.values():
+        image_url = vehicle.image_url or await _async_fetch_image_url(
+            coordinator, vehicle.vin
+        )
 
         if image_url:
             entities.append(UconnectVehicleImage(coordinator, vehicle, hass, image_url))
 
     async_add_entities(entities)
+
+
+async def _async_fetch_image_url(
+    coordinator: UconnectDataUpdateCoordinator, vin: str
+) -> str | None:
+    """Get the image URL from the dedicated image API endpoint."""
+
+    try:
+        result = await coordinator.client.api.get_vehicle_image(vin)
+    except APIError as err:
+        if err.status in (400, 404):
+            _LOGGER.debug("Vehicle image unavailable for %s: HTTP %s", vin, err.status)
+        else:
+            _LOGGER.error("Error getting the vehicle image for %s: %s", vin, err)
+        return None
+    except UconnectError as err:
+        _LOGGER.error("Error getting the vehicle image for %s: %s", vin, err)
+        return None
+
+    _LOGGER.debug("get_vehicle_image response for %s: %s", vin, result)
+
+    items = result.get("items")
+    if isinstance(items, list) and items and isinstance(items[0], dict):
+        url = items[0].get("preciseImageURL")
+        return url if isinstance(url, str) and url else None
+
+    return None
 
 
 class UconnectVehicleImage(UconnectEntity, ImageEntity):
@@ -89,7 +83,7 @@ class UconnectVehicleImage(UconnectEntity, ImageEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
         ImageEntity.__init__(self, hass)
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_image"
-        self._attr_name = f"{vehicle.make} {vehicle.nickname or vehicle.model} Image"
+        self._attr_name = f"{vehicle_name(vehicle)} Image"
         self._attr_icon = "mdi:car"
         self._image_url = image_url
         cache_dir = Path(hass.config.path(CACHE_DIR))
