@@ -93,19 +93,26 @@ async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> Non
 class UconnectOptionFlowHandler(config_entries.OptionsFlow):
     """Handle an option flow for Uconnect"""
 
+    def __init__(self, entry: ConfigEntry) -> None:
+        """Initialize the options flow.
+
+        The entry is kept privately: Home Assistant only provides
+        `self.config_entry` by itself since 2024.12, and setting it is
+        deprecated from then on.
+        """
+        self._entry = entry
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle options init setup."""
 
         if user_input is not None:
-            return self.async_create_entry(
-                title=self.config_entry.title, data=user_input
-            )
+            return self.async_create_entry(title=self._entry.title, data=user_input)
 
         return self.async_show_form(
             data_schema=self.add_suggested_values_to_schema(
-                OPTIONS_SCHEMA, self.config_entry.options
+                OPTIONS_SCHEMA, self._entry.options
             ),
         )
 
@@ -119,7 +126,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry):
         """Initiate options flow instance."""
-        return UconnectOptionFlowHandler()
+        return UconnectOptionFlowHandler(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
