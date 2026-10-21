@@ -39,7 +39,7 @@ async def test_later_failures_keep_cached_data(
     await hass.async_block_till_done()
 
     assert coordinator.last_update_success
-    assert hass.states.get(entity_id).state == "63.0"
+    assert hass.states.get(entity_id).state == "63"
     # No reauth for an error after the setup, it may be temporary
     assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)
 

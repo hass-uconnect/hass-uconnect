@@ -28,7 +28,7 @@
       "chargingStatus": "CHARGING",
       "distanceToEmpty": {"unit": "km", "value": "134"},
       "plugInStatus": true,
-      "stateOfCharge": 63.0,
+      "stateOfCharge": 63,
       "timeToFullyChargeL1": -1,
       "timeToFullyChargeL2": 96,
       "timeToFullyChargeL3": 41,

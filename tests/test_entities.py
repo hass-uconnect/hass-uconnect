@@ -64,7 +64,7 @@ async def test_sensors(hass: HomeAssistant, setup_integration: MockConfigEntry) 
     assert temperature.attributes["unit_of_measurement"] == "°C"
 
     assert state(hass, "sensor", EV_VIN, "privacy_mode") == "INACTIVE"
-    assert state(hass, "sensor", EV_VIN, "state_of_charge") == "63.0"
+    assert state(hass, "sensor", EV_VIN, "state_of_charge") == "63"
     assert state(hass, "sensor", EV_VIN, "charging_level") == "2"
     assert state(hass, "sensor", EV_VIN, "fuel_type") == "E"
     assert state(hass, "sensor", EV_VIN, "timestamp_info") == (
@@ -74,7 +74,7 @@ async def test_sensors(hass: HomeAssistant, setup_integration: MockConfigEntry) 
     pressure = hass.states.get(
         entity_id(hass, "sensor", EV_VIN, "wheel_front_left_pressure")
     )
-    assert pressure.state == "250.0"
+    assert pressure.state == "250"
     assert pressure.attributes["unit_of_measurement"] == "kPa"
 
     vhr = hass.states.get(entity_id(hass, "sensor", EV_VIN, "vhr"))
