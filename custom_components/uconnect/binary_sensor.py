@@ -323,6 +323,10 @@ class UconnectStolenVehicleSensor(BinarySensorEntity, UconnectEntity):
 
         ts = data.get("activationTimestamp")
         if isinstance(ts, int | float) and ts > 0:
-            return {"activation_timestamp": dt_util.utc_from_timestamp(ts / 1000)}
+            return {
+                "activation_timestamp": dt_util.as_local(
+                    dt_util.utc_from_timestamp(ts / 1000)
+                )
+            }
 
         return None

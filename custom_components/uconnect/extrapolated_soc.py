@@ -30,7 +30,11 @@ from py_uconnect import Vehicle
 from py_uconnect.command import COMMAND_DEEP_REFRESH
 
 from .const import DOMAIN
-from .coordinator import UconnectCommandTimeout, UconnectDataUpdateCoordinator
+from .coordinator import (
+    UconnectCommandTimeout,
+    UconnectDataUpdateCoordinator,
+    whole_to_int,
+)
 from .entity import UconnectEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -177,11 +181,17 @@ class SocEstimationState:
         ):
             target_soc = 100.0
 
+        # Whole values as int, the vehicle reports them like that and they
+        # are shown as is when not extrapolating (see whole_to_int)
         return cls(
-            last_actual_soc=float(last_soc) if last_soc is not None else None,
+            last_actual_soc=(
+                whole_to_int(float(last_soc)) if last_soc is not None else None
+            ),
             last_actual_soc_time=last_time_parsed,
             last_vehicle_soc=(
-                float(last_vehicle_soc) if last_vehicle_soc is not None else None
+                whole_to_int(float(last_vehicle_soc))
+                if last_vehicle_soc is not None
+                else None
             ),
             last_odometer=(float(last_odometer) if last_odometer is not None else None),
             is_charging=bool(data.get("is_charging", False)),

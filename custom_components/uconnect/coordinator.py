@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+import dataclasses
 from datetime import datetime, timedelta
 import logging
 from typing import Any
@@ -29,6 +30,7 @@ from py_uconnect import (
     CommandTimeoutError,
     PinAuthenticationError,
     UconnectError,
+    Vehicle,
 )
 from py_uconnect.brands import BRANDS as BRANDS_BY_NAME
 
@@ -50,6 +52,37 @@ type UconnectConfigEntry = ConfigEntry[UconnectDataUpdateCoordinator]
 
 # HTTP statuses meaning that an endpoint is not supported by a vehicle
 UNSUPPORTED_STATUSES = (400, 403, 404)
+
+
+def whole_to_int(value: Any) -> Any:
+    """Return a whole-number float as an int, any other value unchanged.
+
+    py-uconnect 1.0 returns numbers as floats where 0.x kept the integers the
+    API sends. Home Assistant shows floats with a decimal ("63.0" instead of
+    "63") and also derives the precision of unit conversions from them, so
+    the integers are restored to display the values like before.
+    """
+
+    if type(value) is float and value.is_integer():
+        return int(value)
+
+    return value
+
+
+def normalize_vehicle_numbers(vehicle: Vehicle) -> None:
+    """Apply whole_to_int to the fields of a vehicle and its location."""
+
+    for obj in (vehicle, vehicle.location):
+        if obj is None:
+            continue
+
+        for field in dataclasses.fields(obj):
+            if field.name.startswith("raw_"):
+                continue
+
+            value = getattr(obj, field.name)
+            if (normalized := whole_to_int(value)) is not value:
+                setattr(obj, field.name, normalized)
 
 
 @callback
@@ -167,6 +200,10 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator[bool]):
                 raise UpdateFailed(f"Initial data fetch failed: {err}") from err
             # On subsequent runs, log and fall back to cached data
             _LOGGER.warning("Update failed, falling back to cached data: %s", err)
+
+        # Also after a failure: the vehicles may have been partly updated
+        for vehicle in self.client.vehicles.values():
+            normalize_vehicle_numbers(vehicle)
 
         await self._async_update_extra_data()
 
