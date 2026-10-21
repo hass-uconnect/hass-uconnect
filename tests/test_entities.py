@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+from unittest.mock import AsyncMock, patch
+
 from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -14,11 +20,26 @@ from py_uconnect.command import (
 )
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.typing import WebSocketGenerator
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
+    AiohttpClientMockResponse,
+)
+from pytest_homeassistant_custom_component.typing import (
+    ClientSessionGenerator,
+    WebSocketGenerator,
+)
 
 from custom_components.uconnect.const import DOMAIN
+from custom_components.uconnect.frontend_cards import (
+    async_setup_frontend_cards,
+    async_unload_frontend_cards_if_last_entry,
+)
+from custom_components.uconnect.image import BROWSER_HEADERS
 
-from .conftest import EV_VIN, ICE_VIN, FakeClient
+from .conftest import EV_VIN, ICE_VIN, IMAGE_URL, FakeClient
+
+CARD_URL = "/uconnect/uconnect-vehicle-card.js"
+PNG = b"\x89PNG\r\n\x1a\nimage"
 
 
 def entity_id(hass: HomeAssistant, platform: str, vin: str, key: str) -> str:
@@ -215,6 +236,70 @@ async def test_images(
     assert hass.states.get(entity_id(hass, "image", ICE_VIN, "image")) is not None
 
 
+@pytest.fixture
+def image_cache(tmp_path: Path) -> Iterator[None]:
+    """Keep the downloaded images out of the shared test config directory"""
+
+    with patch("custom_components.uconnect.image.CACHE_DIR", str(tmp_path)):
+        yield
+
+
+async def _get_image(
+    hass: HomeAssistant, hass_client: ClientSessionGenerator
+) -> tuple[int, str, bytes]:
+    image = hass.states.get(entity_id(hass, "image", ICE_VIN, "image"))
+    client = await hass_client()
+    resp = await client.get(image.attributes["entity_picture"])
+    return resp.status, resp.content_type, await resp.read()
+
+
+async def test_image_user_agent_fallback(
+    hass: HomeAssistant,
+    image_cache: None,
+    aioclient_mock: AiohttpClientMocker,
+    setup_integration: MockConfigEntry,
+    hass_client: ClientSessionGenerator,
+) -> None:
+    # Some image CDNs reject the browser User-Agent, without telling the
+    # content type of the image once it is accepted
+    async def respond(method: str, url: Any, data: Any) -> AiohttpClientMockResponse:
+        if len(aioclient_mock.mock_calls) == 1:
+            return AiohttpClientMockResponse(method, url, status=403)
+        return AiohttpClientMockResponse(
+            method,
+            url,
+            response=PNG,
+            headers={"Content-Type": "application/octet-stream"},
+        )
+
+    aioclient_mock.get(IMAGE_URL, side_effect=respond)
+
+    status, content_type, body = await _get_image(hass, hass_client)
+
+    assert status == 200
+    assert body == PNG
+    assert content_type.startswith("image/")
+
+    first, second = (call[3] for call in aioclient_mock.mock_calls)
+    assert first["User-Agent"] == BROWSER_HEADERS["User-Agent"]
+    assert "User-Agent" not in second
+
+
+async def test_image_error_not_retried(
+    hass: HomeAssistant,
+    image_cache: None,
+    aioclient_mock: AiohttpClientMocker,
+    setup_integration: MockConfigEntry,
+    hass_client: ClientSessionGenerator,
+) -> None:
+    aioclient_mock.get(IMAGE_URL, status=500)
+
+    status, _, _ = await _get_image(hass, hass_client)
+
+    assert status != 200
+    assert aioclient_mock.call_count == 1
+
+
 async def test_vehicle_card_websocket(
     hass: HomeAssistant,
     setup_integration: MockConfigEntry,
@@ -237,3 +322,43 @@ async def test_vehicle_card_websocket(
         hass, "binary_sensor", EV_VIN, "liftgate_locked"
     )
     assert "sunroof" not in entities
+
+
+async def test_vehicle_card_yaml_dashboards(hass: HomeAssistant) -> None:
+    # Resources can't be added to dashboards in YAML mode, the card is
+    # loaded as an extra frontend module instead
+    hass.data["lovelace"] = SimpleNamespace(
+        resources=SimpleNamespace(async_items=lambda: [])
+    )
+
+    with (
+        patch("custom_components.uconnect.frontend_cards.add_extra_js_url") as add,
+        patch(
+            "custom_components.uconnect.frontend_cards.remove_extra_js_url"
+        ) as remove,
+    ):
+        await async_setup_frontend_cards(hass)
+        add.assert_called_once_with(hass, CARD_URL)
+
+        await async_unload_frontend_cards_if_last_entry(hass)
+        remove.assert_called_once_with(hass, CARD_URL)
+
+
+async def test_vehicle_card_storage_dashboards(hass: HomeAssistant) -> None:
+    resources = SimpleNamespace(
+        loaded=True,
+        async_items=lambda: [],
+        async_create_item=AsyncMock(return_value={"id": "card"}),
+        async_delete_item=AsyncMock(),
+    )
+    hass.data["lovelace"] = SimpleNamespace(resources=resources)
+
+    with patch("custom_components.uconnect.frontend_cards.add_extra_js_url") as add:
+        await async_setup_frontend_cards(hass)
+        await async_unload_frontend_cards_if_last_entry(hass)
+
+    resources.async_create_item.assert_awaited_once_with(
+        {"res_type": "module", "url": CARD_URL}
+    )
+    resources.async_delete_item.assert_awaited_once_with("card")
+    add.assert_not_called()

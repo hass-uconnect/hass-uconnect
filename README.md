@@ -134,6 +134,8 @@ The integration includes a custom Lovelace card (`custom:uconnect-vehicle-card`)
 
 To add the card: Edit a dashboard, add a card, search for "Uconnect Vehicle", and select your vehicle.
 
+With dashboards in YAML mode, where resources can't be added by integrations, the card is loaded as an extra frontend module instead. Refresh the browser after setting up the integration for it to show up.
+
 ![card example](custom_components/uconnect/frontend/card-example.png)
 
 Card configuration options (all toggleable):

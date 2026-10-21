@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from homeassistant.components import websocket_api
+from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CoreState, HomeAssistant
 
@@ -22,6 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 _DATA_KEY = "_frontend_cards_setup"
 _RESOURCE_SCHEDULED_KEY = "_frontend_cards_resource_scheduled"
 _RESOURCE_ID_KEY = "_frontend_cards_resource_id"
+_EXTRA_JS_KEY = "_frontend_cards_extra_js"
 
 _STATIC_BASE_URL = "/uconnect/uconnect-vehicle-card.js"
 _STATIC_RELATIVE_PATH = Path(__file__).parent / "frontend" / "uconnect-vehicle-card.js"
@@ -44,6 +46,11 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> str | None:
             _LOGGER.debug(
                 "Lovelace resources not available, skipping resource registration"
             )
+            return None
+
+        # The resources of YAML mode dashboards are read-only
+        if not hasattr(resources, "async_create_item"):
+            _LOGGER.debug("Lovelace resources are read-only, skipping registration")
             return None
 
         # Mirror the lazy-load guard that ResourceStorageCollection uses
@@ -105,8 +112,19 @@ async def async_setup_frontend_cards(hass: HomeAssistant) -> None:
         if resource_id:
             domain_data[_RESOURCE_ID_KEY] = resource_id
             _LOGGER.debug("Registered Lovelace resource %s", resource_id)
-        else:
-            _LOGGER.debug("Lovelace resource registration returned None")
+        elif not domain_data.get(_EXTRA_JS_KEY):
+            # No resource can be added e.g. in YAML mode: load the card JS on
+            # every frontend page instead
+            try:
+                add_extra_js_url(hass, _STATIC_BASE_URL)
+            except Exception as err:
+                _LOGGER.debug("Unable to add the card JS as extra module: %s", err)
+                return
+            domain_data[_EXTRA_JS_KEY] = True
+            _LOGGER.info(
+                "Lovelace resource not registered (YAML mode?), "
+                "loading the vehicle card as an extra frontend module"
+            )
 
     if hass.state is CoreState.running:
         _LOGGER.debug("HA running, registering Lovelace resource now")
@@ -153,6 +171,12 @@ async def async_unload_frontend_cards_if_last_entry(
     resource_id = domain_data.pop(_RESOURCE_ID_KEY, None)
     if isinstance(resource_id, str) and resource_id:
         await _async_unregister_lovelace_resource(hass, resource_id)
+
+    if domain_data.pop(_EXTRA_JS_KEY, None):
+        try:
+            remove_extra_js_url(hass, _STATIC_BASE_URL)
+        except Exception as err:
+            _LOGGER.debug("Unable to remove the card JS extra module: %s", err)
 
 
 # ---- Websocket API ----

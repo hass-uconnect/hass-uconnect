@@ -21,6 +21,20 @@ _LOGGER = logging.getLogger(__name__)
 
 CACHE_DIR = ".storage/uconnect"
 
+# The image CDNs are fronted by Akamai, which rejects some User-Agents with a
+# 403: the Ram one blocks non-browser agents (#116), the Fiat one blocks the
+# browser agent (#127). Each set of headers is tried until one is accepted,
+# the empty one sending the default Home Assistant User-Agent.
+BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": "image/avif,image/webp,image/png,image/*,*/*",
+}
+FETCH_HEADERS: tuple[dict[str, str], ...] = (BROWSER_HEADERS, {})
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -133,29 +147,32 @@ class UconnectVehicleImage(UconnectEntity, ImageEntity):
         """Download image from URL."""
         try:
             session = async_get_clientsession(self.hass)
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/126.0.0.0 Safari/537.36"
-                ),
-                "Accept": "image/avif,image/webp,image/png,image/*,*/*",
-            }
-            async with session.get(
-                url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status != 200:
-                    _LOGGER.warning(
-                        "Failed to fetch vehicle image: HTTP %s", resp.status
-                    )
-                    return None
-                data = await resp.read()
-                if resp.content_type:
-                    self._attr_content_type = resp.content_type
-                return data
+            for headers in FETCH_HEADERS:
+                async with session.get(
+                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
+                ) as resp:
+                    if resp.status == 403:
+                        _LOGGER.debug(
+                            "Vehicle image rejected with HTTP 403 for User-Agent %s",
+                            headers.get("User-Agent", "default"),
+                        )
+                        continue
+                    if resp.status != 200:
+                        _LOGGER.warning(
+                            "Failed to fetch vehicle image: HTTP %s", resp.status
+                        )
+                        return None
+                    data = await resp.read()
+                    # Missing headers are reported as application/octet-stream
+                    if resp.content_type.startswith("image/"):
+                        self._attr_content_type = resp.content_type
+                    return data
         except Exception:
             _LOGGER.exception("Error fetching vehicle image")
             return None
+
+        _LOGGER.warning("Failed to fetch vehicle image: HTTP 403")
+        return None
 
     def _read_cache(self) -> bytes | None:
         """Read cached image from disk."""
