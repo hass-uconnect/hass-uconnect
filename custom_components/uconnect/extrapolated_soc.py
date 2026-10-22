@@ -502,11 +502,6 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 or current_soc != self._state.last_vehicle_soc
             )
 
-            # Only update SOC when charging/driving and new value exceeds extrapolated
-            # When idle (parked), car data is stale and shouldn't reset extrapolation
-            # Only skip if car WAS idle AND IS STILL idle - any state transition
-            # (idle→driving or driving→idle) means fresh data
-            current_extrapolated = self.native_value
             is_idle = not is_charging and not ignition_on
 
             # Physical constraint: SOC cannot drop while already charging
@@ -531,26 +526,29 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
                 soc_changed = False
                 skip_stale_charging_data = True
 
+            # A parked vehicle cannot gain charge, so a reading above the last
+            # one it reported is stale. A lower reading is new data even when
+            # it sits above the extrapolation: rejecting it there would keep
+            # an overestimated drain from ever being corrected or unlearned.
+            # Any state transition (idle to driving or back) means fresh data
             if soc_changed and self._state.is_idle and is_idle:
-                # Accept SOC at or below extrapolation (confirms drain, likely fresh data)
-                # Reject SOC above extrapolation (stale - can't gain charge while idle)
                 if (
-                    current_extrapolated is not None
-                    and current_soc <= current_extrapolated
+                    self._state.last_vehicle_soc is None
+                    or current_soc <= self._state.last_vehicle_soc
                 ):
                     _LOGGER.debug(
-                        "Accepting idle SOC update for %s: "
-                        "%.1f%% confirms drain (extrapolated %.1f%%)",
+                        "Accepting idle SOC update for %s: %.1f%% (last reported %s%%)",
                         self.vehicle.vin,
                         current_soc,
-                        current_extrapolated,
+                        self._state.last_vehicle_soc,
                     )
                 else:
                     _LOGGER.debug(
                         "Skipping idle SOC update for %s: "
-                        "%.1f%% above extrapolated (stale data)",
+                        "%.1f%% above last reported %.1f%% (stale data)",
                         self.vehicle.vin,
                         current_soc,
+                        self._state.last_vehicle_soc,
                     )
                     soc_changed = False
 
