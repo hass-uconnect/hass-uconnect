@@ -854,8 +854,10 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        # Available if we have received at least one SOC reading
-        return self._state.last_actual_soc is not None
+        # Available if we have received at least one SOC reading, and the
+        # vehicle is still in the account: one that was removed would keep
+        # being extrapolated from its last state forever
+        return super().available and self._state.last_actual_soc is not None
 
     def _get_elapsed_hours(self, now: datetime) -> float | None:
         """Get hours elapsed since last actual SOC update.
@@ -1056,4 +1058,7 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return getattr(self.vehicle, "state_of_charge", None) is not None
+        return (
+            super().available
+            and getattr(self.vehicle, "state_of_charge", None) is not None
+        )
