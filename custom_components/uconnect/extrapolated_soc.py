@@ -87,6 +87,7 @@ class SocEstimationState:
     has_measured_rate: bool = False  # Stored rate came from observed SOC changes
     measured_this_session: bool = False  # A rate was measured during this charge
     rate_baseline_stale: bool = False  # Baseline reading predates the charge
+    charged_since_reading: bool = False  # A charge ended after the baseline reading
     idle_drain_rate_pct_per_hour: float = DEFAULT_IDLE_DRAIN_RATE
     learned_correction_factor: float = DEFAULT_CORRECTION_FACTOR
     target_soc: float = 100.0
@@ -108,6 +109,7 @@ class SocEstimationState:
             "has_measured_rate": self.has_measured_rate,
             "measured_this_session": self.measured_this_session,
             "rate_baseline_stale": self.rate_baseline_stale,
+            "charged_since_reading": self.charged_since_reading,
             "idle_drain_rate_pct_per_hour": self.idle_drain_rate_pct_per_hour,
             "learned_correction_factor": self.learned_correction_factor,
             "target_soc": self.target_soc,
@@ -206,6 +208,7 @@ class SocEstimationState:
                 data.get("measured_this_session", data.get("has_measured_rate", False))
             ),
             rate_baseline_stale=bool(data.get("rate_baseline_stale", False)),
+            charged_since_reading=bool(data.get("charged_since_reading", False)),
             idle_drain_rate_pct_per_hour=float(drain_rate),
             learned_correction_factor=float(correction),
             target_soc=float(target_soc),
@@ -534,11 +537,14 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             # one it reported is stale. A lower reading is new data even when
             # it sits above the extrapolation: rejecting it there would keep
             # an overestimated drain from ever being corrected or unlearned.
-            # Any state transition (idle to driving or back) means fresh data
+            # Any state transition (idle to driving or back) means fresh data,
+            # and so does a higher reading after a charge that ended without
+            # one, the gain it brought having to arrive somehow
             if soc_changed and self._state.is_idle and is_idle:
                 if (
                     self._state.last_vehicle_soc is None
                     or current_soc <= self._state.last_vehicle_soc
+                    or self._state.charged_since_reading
                 ):
                     _LOGGER.debug(
                         "Accepting idle SOC update for %s: %.1f%% (last reported %s%%)",
@@ -591,6 +597,9 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             self._state.last_actual_soc_time = now
             self._state.last_vehicle_soc = current_soc
             self._state.last_odometer = getattr(self.vehicle, "odometer", None)
+            self._state.charged_since_reading = False
+        elif was_charging and not self._state.is_charging:
+            self._state.charged_since_reading = True
 
         # When transitioning from idle to non-idle (car powers on) without
         # fresh SOC data, lock in the accumulated idle drain so native_value
@@ -784,12 +793,14 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         ignition off). The vehicle has to be idle at both ends of the window,
         since one that has since been driven spent the drop on moving, not on
         sitting still, and a single drive reads as hundreds of times the drain
-        a parked car has.
+        a parked car has. A window a charge ended in is skipped too, the gain
+        hides the drain.
         """
         if (
             self._state.last_actual_soc is None
             or not was_idle
             or not self._state.is_idle
+            or self._state.charged_since_reading
         ):
             return
 
