@@ -712,14 +712,18 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         comes from that estimate, learning it from a measured rate would drive
         it towards 1.0 and leave nothing to correct the next estimate with.
 
-        A baseline restamped at charging start is skipped for the same reason
-        the rate measurement skips it: the change since the stored reading did
-        not all happen inside the window the timestamp describes.
+        A baseline restamped at charging start is skipped while the charge
+        goes on, for the same reason the rate measurement skips it: the change
+        since the stored reading did not all happen inside the window the
+        timestamp describes, and over the few minutes to the first deep
+        refresh that error swamps the gain. The reading that ends the session
+        is still used, its window spans the whole charge, and without deep
+        refresh it is the only one the session ever gets.
         """
         if (
             self._state.last_actual_soc is None
             or not was_charging
-            or self._state.rate_baseline_stale
+            or (self._state.rate_baseline_stale and self._state.is_charging)
             or self._state.has_measured_rate
             or self._state.charging_rate_pct_per_hour <= 0
         ):
