@@ -628,13 +628,13 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             and self._state.last_actual_soc is not None
         ):
             # Only the time moves, so the state of charge paired with it can
-            # be older than the timestamp now says. Coming from idle that is
-            # harmless, the reading did not move because the car was parked
-            # and the drain lock-in above has already reconciled the pair.
-            # Coming from a drive it is not: the gain since that reading would
-            # all be credited to the short window after the restamp, so wait
-            # for a reading taken while charging before measuring
-            self._state.rate_baseline_stale = not soc_changed and not was_idle
+            # be older than the timestamp now says. Coming from a drive, the
+            # gain since that reading would all be credited to the short
+            # window after the restamp. Coming from idle, the drain lock-in
+            # above made the baseline an estimate, and any error in the drain
+            # would be read as charging. Either way, wait for a reading taken
+            # while charging before measuring
+            self._state.rate_baseline_stale = not soc_changed
             self._state.last_actual_soc_time = now
 
         # Calculate charging rate if charging with valid data
@@ -643,8 +643,8 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         if current_soc is not None and not skip_stale_charging_data:
             if is_charging:
                 # Prefer observed rate from consecutive SOC readings.
-                # Require MIN_SOC_CHANGE_FOR_LEARNING to filter out tiny deltas
-                # from idle drain lock-in adjustments.
+                # Require MIN_SOC_CHANGE_FOR_LEARNING so that only a real gain
+                # is timed.
                 if (
                     was_charging
                     and soc_changed
