@@ -56,7 +56,10 @@ DEFAULT_IDLE_DRAIN_RATE = 0.006  # Default 0.006%/hour ≈ 1%/week ≈ 4%/month
 MIN_IDLE_DRAIN_RATE = 0.0  # Minimum drain rate
 MAX_IDLE_DRAIN_RATE = 0.04  # Maximum drain rate (0.04%/hour ≈ 1%/day)
 MIN_IDLE_TIME_FOR_LEARNING_HOURS = 1.0  # Minimum 1 hour idle for learning drain rate
-IDLE_DRAIN_EMA_ALPHA = 0.2  # Slower learning for drain rate (less frequent data points)
+# Each drain sample is weighted by the time it spans, a window this long or
+# longer replaces the learned rate outright. With whole-percent readings a
+# short window that happens to catch a step reads many times the real drain
+IDLE_DRAIN_TIME_CONSTANT_HOURS = 72.0
 
 # Constants for deep refresh scheduling
 # The vehicle settles on a time-to-full for the connected charger only a
@@ -818,10 +821,10 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
             min(MAX_IDLE_DRAIN_RATE, observed_drain_rate),
         )
 
-        # Update learned drain rate with exponential moving average
-        self._state.idle_drain_rate_pct_per_hour = (
-            IDLE_DRAIN_EMA_ALPHA * observed_drain_rate
-            + (1 - IDLE_DRAIN_EMA_ALPHA) * self._state.idle_drain_rate_pct_per_hour
+        # Move towards the observed rate in proportion to the time it covers
+        weight = min(1.0, elapsed_hours / IDLE_DRAIN_TIME_CONSTANT_HOURS)
+        self._state.idle_drain_rate_pct_per_hour += weight * (
+            observed_drain_rate - self._state.idle_drain_rate_pct_per_hour
         )
 
         _LOGGER.debug(
