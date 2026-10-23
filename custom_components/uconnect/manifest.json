@@ -6,6 +6,9 @@
         "http",
         "lovelace"
     ],
+    "categories": [
+        "vehicles_transport.cars_evs"
+    ],
     "codeowners": [
         "@blind-oracle"
     ],
