@@ -7,7 +7,7 @@
         "lovelace"
     ],
     "categories": [
-        "vehicles_transport.cars_evs"
+        "vehicles_transport"
     ],
     "codeowners": [
         "@blind-oracle"
