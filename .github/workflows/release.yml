@@ -5,16 +5,67 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  validate:
+    uses: ./.github/workflows/hacs.yml
+
+  release:
+    needs: [test, validate]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
 
     steps:
-    - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+        with:
+          # The previous tag is needed to build the changelog
+          fetch-depth: 0
 
-    - uses: ncipollo/release-action@v1
-      with:
-        makeLatest: true
-        body: "Home Assistant Uconnect Release"
+      - name: Set manifest version from tag
+        run: |
+          manifest=custom_components/uconnect/manifest.json
+          jq --indent 4 --arg v "${GITHUB_REF_NAME#v}" '.version = $v' "$manifest" > manifest.tmp
+          mv manifest.tmp "$manifest"
+          cat "$manifest"
+
+      - name: Build zip
+        working-directory: custom_components/uconnect
+        run: zip -r "$GITHUB_WORKSPACE/uconnect.zip" . -x '__pycache__/*'
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          prev=$(git describe --tags --abbrev=0 "$tag^" 2>/dev/null || true)
+
+          # shellcheck disable=SC2016 # backticks are markdown, not command substitution
+          {
+            echo "## Commits"
+            echo
+            if [ -n "$prev" ]; then
+              # Merge commits are skipped, PRs are listed by the generated notes below
+              gh api --paginate "repos/$GITHUB_REPOSITORY/compare/$prev...$tag" --jq '
+                .commits[] | select(.parents | length == 1)
+                | "- \(.commit.message | split("\n")[0]) ([`\(.sha[0:7])`](\(.html_url)))"
+                  + if .author.login then " by @\(.author.login)" else " by \(.commit.author.name)" end'
+            else
+              git log --no-merges --reverse --format='- %s (`%h`) by %an' "$tag"
+            fi
+            echo
+          } > release_notes.md
+
+          cat release_notes.md
+
+      - uses: ncipollo/release-action@v1
+        with:
+          makeLatest: true
+          artifacts: uconnect.zip
+          bodyFile: release_notes.md
+          generateReleaseNotes: true

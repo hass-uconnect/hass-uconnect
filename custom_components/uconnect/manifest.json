@@ -6,9 +6,6 @@
         "http",
         "lovelace"
     ],
-    "categories": [
-        "vehicles_transport"
-    ],
     "codeowners": [
         "@blind-oracle"
     ],
@@ -25,5 +22,5 @@
     "requirements": [
         "py-uconnect==1.0.0"
     ],
-    "version": "1.0.2"
+    "version": "0.0.0"
 }

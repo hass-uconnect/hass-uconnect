@@ -1,9 +1,11 @@
 name: Validate Integration
 
 on:
-  push: 
+  push:
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   validate:
