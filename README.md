@@ -4,7 +4,7 @@ Connect your Uconnect-enabled vehicle to Home Assistant. This integration has be
 
 ## Car Brands
 
-US, Canada, EU & Asia regions are supported. Try a different region if the originally selected region does not authenticate.
+US, Canada, EU, Asia & LATAM (Brazil) regions are supported. Try a different region if the originally selected region does not authenticate. The LATAM options are for accounts of the Brazilian "My Uconnect" app.
 
 - Abarth: Works ✅
 - Alfa Romeo: Works ✅
