@@ -105,6 +105,25 @@ async def test_extrapolated_soc_without_extrapolation(
     await hass.config_entries.async_unload(config_entry.entry_id)
 
 
+async def test_driving_range_with_zero_battery_range(
+    hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: FakeClient
+) -> None:
+    """Vehicles with a combustion engine (or a PHEV with an empty battery)
+    report a battery range of 0, the driving range is the fuel range then"""
+
+    fake_client.info[ICE_VIN]["evInfo"]["battery"] = {
+        "distanceToEmpty": {"unit": "mi", "value": "0"}
+    }
+
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # 410 mi, converted to km by the metric test instance
+    assert round(float(sensor_state(hass, ICE_VIN, "distance_to_empty"))) == 660
+
+    await hass.config_entries.async_unload(config_entry.entry_id)
+
+
 async def test_svla_activation_timestamp_is_local(
     hass: HomeAssistant, config_entry: MockConfigEntry, fake_client: FakeClient
 ) -> None:

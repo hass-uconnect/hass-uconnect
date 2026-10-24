@@ -12,13 +12,16 @@ from py_uconnect.brands import (
     FIAT_ASIA,
     FIAT_CANADA,
     FIAT_EU,
+    FIAT_LATAM,
     FIAT_US,
     JEEP_ASIA,
     JEEP_EU,
+    JEEP_LATAM,
     JEEP_US,
     MASERATI_ASIA,
     MASERATI_EU,
     MASERATI_US_CANADA,
+    RAM_LATAM,
     RAM_US,
 )
 
@@ -47,6 +50,10 @@ BRANDS = {
     15: FIAT_ASIA.name,
     16: FIAT_CANADA.name,
     17: JEEP_ASIA.name,
+    # New entries get new numbers: config entries store the number
+    18: JEEP_LATAM.name,
+    19: FIAT_LATAM.name,
+    20: RAM_LATAM.name,
 }
 
 DEFAULT_PIN: str = ""
