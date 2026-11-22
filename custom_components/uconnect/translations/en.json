@@ -41,6 +41,237 @@
             }
         }
     },
+    "entity": {
+        "binary_sensor": {
+            "ignition_on": {
+                "name": "Ignition"
+            },
+            "ev_running": {
+                "name": "EV Running"
+            },
+            "door_driver_locked": {
+                "name": "Door Driver"
+            },
+            "door_passenger_locked": {
+                "name": "Door Passenger"
+            },
+            "door_rear_left_locked": {
+                "name": "Door Rear Left"
+            },
+            "door_rear_right_locked": {
+                "name": "Door Rear Right"
+            },
+            "trunk_locked": {
+                "name": "Trunk"
+            },
+            "window_driver_closed": {
+                "name": "Window Driver"
+            },
+            "window_passenger_closed": {
+                "name": "Window Passenger"
+            },
+            "window_rear_left_closed": {
+                "name": "Window Rear Left"
+            },
+            "window_rear_right_closed": {
+                "name": "Window Rear Right"
+            },
+            "sunroof_closed": {
+                "name": "Sunroof"
+            },
+            "liftgate_locked": {
+                "name": "Liftgate"
+            },
+            "hvac_on": {
+                "name": "HVAC Active"
+            },
+            "plugged_in": {
+                "name": "EV Charger"
+            },
+            "charging": {
+                "name": "Charging"
+            },
+            "wheel_front_left_pressure_warning": {
+                "name": "Tire Pressure Front Left Warning"
+            },
+            "wheel_front_right_pressure_warning": {
+                "name": "Tire Pressure Front Right Warning"
+            },
+            "wheel_rear_right_pressure_warning": {
+                "name": "Tire Pressure Rear Right Warning"
+            },
+            "wheel_rear_left_pressure_warning": {
+                "name": "Tire Pressure Rear Left Warning"
+            },
+            "fuel_low": {
+                "name": "Low Fuel"
+            },
+            "ev_head_seat": {
+                "name": "Heated Seat"
+            },
+            "ev_cabin_cond": {
+                "name": "Cabin Conditioning"
+            },
+            "svla": {
+                "name": "Stolen Vehicle Status"
+            }
+        },
+        "button": {
+            "button_location": {
+                "name": "Refresh Location"
+            },
+            "button_deep_refresh": {
+                "name": "Deep Refresh"
+            },
+            "button_charge": {
+                "name": "Charge Now"
+            },
+            "button_lights": {
+                "name": "Lights"
+            },
+            "button_lights_horn": {
+                "name": "Lights & Horn"
+            },
+            "update": {
+                "name": "Update Data"
+            },
+            "reset_battery_learning": {
+                "name": "Reset Battery Learning"
+            }
+        },
+        "device_tracker": {
+            "location": {
+                "name": "Location"
+            }
+        },
+        "image": {
+            "image": {
+                "name": "Image"
+            }
+        },
+        "lock": {
+            "lock_doors": {
+                "name": "Doors Lock"
+            }
+        },
+        "select": {
+            "charging_level_preference": {
+                "name": "Charging Level Pref"
+            }
+        },
+        "sensor": {
+            "odometer": {
+                "name": "Odometer"
+            },
+            "distance_to_empty": {
+                "name": "Driving Range"
+            },
+            "range_gas": {
+                "name": "Driving Range (Gas)"
+            },
+            "range_total": {
+                "name": "Driving Range (Total)"
+            },
+            "state_of_charge": {
+                "name": "HVBattery Charge"
+            },
+            "charging_level": {
+                "name": "Charger Type"
+            },
+            "battery_voltage": {
+                "name": "12V Battery"
+            },
+            "time_to_fully_charge_l2": {
+                "name": "Time to Charge L2"
+            },
+            "time_to_fully_charge_l3": {
+                "name": "Time to Charge L3"
+            },
+            "distance_to_service": {
+                "name": "Distance to Service"
+            },
+            "days_to_service": {
+                "name": "Days till service needed"
+            },
+            "wheel_front_left_pressure": {
+                "name": "Front Left Tire Pressure"
+            },
+            "wheel_front_right_pressure": {
+                "name": "Front Right Tire Pressure"
+            },
+            "wheel_rear_left_pressure": {
+                "name": "Rear Left Tire Pressure"
+            },
+            "wheel_rear_right_pressure": {
+                "name": "Rear Right Tire Pressure"
+            },
+            "oil_level": {
+                "name": "Oil Life"
+            },
+            "fuel_amount": {
+                "name": "Fuel Remaining"
+            },
+            "timestamp_info": {
+                "name": "Last Info Update At"
+            },
+            "timestamp_status": {
+                "name": "Last Status Update At"
+            },
+            "last_location_update": {
+                "name": "Last Location Update At"
+            },
+            "fuel_type": {
+                "name": "Fuel Type"
+            },
+            "battery_state_of_charge": {
+                "name": "Battery State of Charge"
+            },
+            "time_to_fully_charge_l1": {
+                "name": "Time to Charge L1"
+            },
+            "hvac_temperature": {
+                "name": "HVAC Temperature"
+            },
+            "privacy_mode": {
+                "name": "Privacy Mode"
+            },
+            "vhr": {
+                "name": "Health Report"
+            },
+            "maintenance": {
+                "name": "Maintenance History"
+            },
+            "charge_schedule": {
+                "name": "Charge Schedule"
+            },
+            "extrapolated_soc": {
+                "name": "Extrapolated Battery"
+            },
+            "charging_rate": {
+                "name": "Charging Rate"
+            }
+        },
+        "switch": {
+            "switch_engine": {
+                "name": "Engine"
+            },
+            "switch_precondition": {
+                "name": "Precondition"
+            },
+            "switch_hvac": {
+                "name": "HVAC"
+            },
+            "switch_comfort": {
+                "name": "Comfort"
+            },
+            "switch_charging": {
+                "name": "Charging"
+            },
+            "switch_trunk": {
+                "name": "Lock Trunk"
+            }
+        }
+    },
     "services": {
         "update": {
             "name": "Update",

@@ -19,7 +19,7 @@ from py_uconnect import Vehicle
 
 from .const import DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, should_add, vehicle_name
+from .entity import UconnectEntity, should_add
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -35,21 +35,21 @@ class UconnectBinarySensorEntityDescription(BinarySensorEntityDescription):
 SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = (
     UconnectBinarySensorEntityDescription(
         key="ignition_on",
-        name="Ignition",
+        translation_key="ignition_on",
         on_icon="mdi:engine",
         off_icon="mdi:engine-off",
         device_class=BinarySensorDeviceClass.POWER,
     ),
     UconnectBinarySensorEntityDescription(
         key="ev_running",
-        name="EV Running",
+        translation_key="ev_running",
         on_icon="mdi:engine",
         off_icon="mdi:engine-off",
         device_class=BinarySensorDeviceClass.POWER,
     ),
     UconnectBinarySensorEntityDescription(
         key="door_driver_locked",
-        name="Door Driver",
+        translation_key="door_driver_locked",
         postprocess=lambda x: not x,
         on_icon="mdi:car-door-lock",
         off_icon="mdi:car-door-lock-open",
@@ -57,7 +57,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="door_passenger_locked",
-        name="Door Passenger",
+        translation_key="door_passenger_locked",
         postprocess=lambda x: not x,
         on_icon="mdi:car-door-lock",
         off_icon="mdi:car-door-lock-open",
@@ -65,7 +65,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="door_rear_left_locked",
-        name="Door Rear Left",
+        translation_key="door_rear_left_locked",
         postprocess=lambda x: not x,
         on_icon="mdi:car-door-lock",
         off_icon="mdi:car-door-lock-open",
@@ -73,7 +73,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="door_rear_right_locked",
-        name="Door Rear Right",
+        translation_key="door_rear_right_locked",
         postprocess=lambda x: not x,
         on_icon="mdi:car-door-lock",
         off_icon="mdi:car-door-lock-open",
@@ -81,7 +81,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="trunk_locked",
-        name="Trunk",
+        translation_key="trunk_locked",
         postprocess=lambda x: not x,
         on_icon="mdi:lock",
         off_icon="mdi:lock-open",
@@ -89,7 +89,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="window_driver_closed",
-        name="Window Driver",
+        translation_key="window_driver_closed",
         postprocess=lambda x: not x,
         on_icon="mdi:window-open",
         off_icon="mdi:window-closed",
@@ -97,7 +97,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="window_passenger_closed",
-        name="Window Passenger",
+        translation_key="window_passenger_closed",
         postprocess=lambda x: not x,
         on_icon="mdi:window-open",
         off_icon="mdi:window-closed",
@@ -105,7 +105,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="window_rear_left_closed",
-        name="Window Rear Left",
+        translation_key="window_rear_left_closed",
         postprocess=lambda x: not x,
         on_icon="mdi:window-open",
         off_icon="mdi:window-closed",
@@ -113,7 +113,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="window_rear_right_closed",
-        name="Window Rear Right",
+        translation_key="window_rear_right_closed",
         postprocess=lambda x: not x,
         on_icon="mdi:window-open",
         off_icon="mdi:window-closed",
@@ -121,7 +121,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="sunroof_closed",
-        name="Sunroof",
+        translation_key="sunroof_closed",
         postprocess=lambda x: not x,
         on_icon="mdi:window-open",
         off_icon="mdi:window-closed",
@@ -129,7 +129,7 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="liftgate_locked",
-        name="Liftgate",
+        translation_key="liftgate_locked",
         postprocess=lambda x: not x,
         on_icon="mdi:lock",
         off_icon="mdi:lock-open",
@@ -137,69 +137,69 @@ SENSOR_DESCRIPTIONS: Final[tuple[UconnectBinarySensorEntityDescription, ...]] = 
     ),
     UconnectBinarySensorEntityDescription(
         key="hvac_on",
-        name="HVAC Active",
+        translation_key="hvac_on",
         on_icon="mdi:hvac",
         off_icon="mdi:hvac-off",
         device_class=BinarySensorDeviceClass.RUNNING,
     ),
     UconnectBinarySensorEntityDescription(
         key="plugged_in",
-        name="EV Charger",
+        translation_key="plugged_in",
         on_icon="mdi:power-plug",
         off_icon="mdi:power-plug-off",
         device_class=BinarySensorDeviceClass.PLUG,
     ),
     UconnectBinarySensorEntityDescription(
         key="charging",
-        name="Charging",
+        translation_key="charging",
         on_icon="mdi:battery-charging",
         off_icon="mdi:battery-alert",
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
     ),
     UconnectBinarySensorEntityDescription(
         key="wheel_front_left_pressure_warning",
-        name="Tire Pressure Front Left Warning",
+        translation_key="wheel_front_left_pressure_warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     UconnectBinarySensorEntityDescription(
         key="wheel_front_right_pressure_warning",
-        name="Tire Pressure Front Right Warning",
+        translation_key="wheel_front_right_pressure_warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     UconnectBinarySensorEntityDescription(
         key="wheel_rear_right_pressure_warning",
-        name="Tire Pressure Rear Right Warning",
+        translation_key="wheel_rear_right_pressure_warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     UconnectBinarySensorEntityDescription(
         key="wheel_rear_left_pressure_warning",
-        name="Tire Pressure Rear Left Warning",
+        translation_key="wheel_rear_left_pressure_warning",
         on_icon="mdi:car-tire-alert",
         off_icon="mdi:car-tire-alert",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     UconnectBinarySensorEntityDescription(
         key="fuel_low",
-        name="Low Fuel",
+        translation_key="fuel_low",
         on_icon="mdi:gas-station",
         off_icon="mdi:fuel",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     UconnectBinarySensorEntityDescription(
         key="ev_head_seat",
-        name="Heated Seat",
+        translation_key="ev_head_seat",
         on_icon="mdi:car-seat-heater",
         off_icon="mdi:car-seat",
     ),
     UconnectBinarySensorEntityDescription(
         key="ev_cabin_cond",
-        name="Cabin Conditioning",
+        translation_key="ev_cabin_cond",
         on_icon="mdi:air-conditioner",
         off_icon="mdi:air-conditioner",
     ),
@@ -252,7 +252,6 @@ class UconnectBinarySensor(BinarySensorEntity, UconnectEntity):
         self.postprocess = description.postprocess
         self.entity_description: UconnectBinarySensorEntityDescription = description
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
-        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
 
     @property
     def is_on(self) -> bool | None:
@@ -294,7 +293,7 @@ class UconnectStolenVehicleSensor(BinarySensorEntity, UconnectEntity):
         super().__init__(coordinator, vehicle)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_svla"
-        self._attr_name = f"{vehicle_name(vehicle)} Stolen Vehicle Status"
+        self._attr_translation_key = "svla"
         self._attr_device_class = BinarySensorDeviceClass.SAFETY
 
     @property

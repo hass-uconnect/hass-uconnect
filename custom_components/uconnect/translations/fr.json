@@ -41,6 +41,237 @@
             }
         }
     },
+    "entity": {
+        "binary_sensor": {
+            "ignition_on": {
+                "name": "Contact"
+            },
+            "ev_running": {
+                "name": "Moteur électrique en marche"
+            },
+            "door_driver_locked": {
+                "name": "Porte conducteur"
+            },
+            "door_passenger_locked": {
+                "name": "Porte passager"
+            },
+            "door_rear_left_locked": {
+                "name": "Porte arrière gauche"
+            },
+            "door_rear_right_locked": {
+                "name": "Porte arrière droite"
+            },
+            "trunk_locked": {
+                "name": "Coffre"
+            },
+            "window_driver_closed": {
+                "name": "Vitre conducteur"
+            },
+            "window_passenger_closed": {
+                "name": "Vitre passager"
+            },
+            "window_rear_left_closed": {
+                "name": "Vitre arrière gauche"
+            },
+            "window_rear_right_closed": {
+                "name": "Vitre arrière droite"
+            },
+            "sunroof_closed": {
+                "name": "Toit ouvrant"
+            },
+            "liftgate_locked": {
+                "name": "Hayon"
+            },
+            "hvac_on": {
+                "name": "Climatisation active"
+            },
+            "plugged_in": {
+                "name": "Câble de recharge"
+            },
+            "charging": {
+                "name": "En charge"
+            },
+            "wheel_front_left_pressure_warning": {
+                "name": "Alerte pression pneu avant gauche"
+            },
+            "wheel_front_right_pressure_warning": {
+                "name": "Alerte pression pneu avant droit"
+            },
+            "wheel_rear_right_pressure_warning": {
+                "name": "Alerte pression pneu arrière droit"
+            },
+            "wheel_rear_left_pressure_warning": {
+                "name": "Alerte pression pneu arrière gauche"
+            },
+            "fuel_low": {
+                "name": "Carburant bas"
+            },
+            "ev_head_seat": {
+                "name": "Siège chauffant"
+            },
+            "ev_cabin_cond": {
+                "name": "Climatisation de l'habitacle"
+            },
+            "svla": {
+                "name": "Alerte véhicule volé"
+            }
+        },
+        "button": {
+            "button_location": {
+                "name": "Actualiser la position"
+            },
+            "button_deep_refresh": {
+                "name": "Actualisation complète"
+            },
+            "button_charge": {
+                "name": "Charger maintenant"
+            },
+            "button_lights": {
+                "name": "Feux"
+            },
+            "button_lights_horn": {
+                "name": "Feux et klaxon"
+            },
+            "update": {
+                "name": "Mettre à jour les données"
+            },
+            "reset_battery_learning": {
+                "name": "Réinitialiser l'apprentissage de la batterie"
+            }
+        },
+        "device_tracker": {
+            "location": {
+                "name": "Position"
+            }
+        },
+        "image": {
+            "image": {
+                "name": "Image"
+            }
+        },
+        "lock": {
+            "lock_doors": {
+                "name": "Verrouillage des portes"
+            }
+        },
+        "select": {
+            "charging_level_preference": {
+                "name": "Niveau de charge préféré"
+            }
+        },
+        "sensor": {
+            "odometer": {
+                "name": "Kilométrage"
+            },
+            "distance_to_empty": {
+                "name": "Autonomie"
+            },
+            "range_gas": {
+                "name": "Autonomie (carburant)"
+            },
+            "range_total": {
+                "name": "Autonomie (totale)"
+            },
+            "state_of_charge": {
+                "name": "Charge de la batterie haute tension"
+            },
+            "charging_level": {
+                "name": "Type de chargeur"
+            },
+            "battery_voltage": {
+                "name": "Batterie 12 V"
+            },
+            "time_to_fully_charge_l2": {
+                "name": "Temps de charge L2"
+            },
+            "time_to_fully_charge_l3": {
+                "name": "Temps de charge L3"
+            },
+            "distance_to_service": {
+                "name": "Distance avant entretien"
+            },
+            "days_to_service": {
+                "name": "Jours avant entretien"
+            },
+            "wheel_front_left_pressure": {
+                "name": "Pression pneu avant gauche"
+            },
+            "wheel_front_right_pressure": {
+                "name": "Pression pneu avant droit"
+            },
+            "wheel_rear_left_pressure": {
+                "name": "Pression pneu arrière gauche"
+            },
+            "wheel_rear_right_pressure": {
+                "name": "Pression pneu arrière droit"
+            },
+            "oil_level": {
+                "name": "Durée de vie de l'huile"
+            },
+            "fuel_amount": {
+                "name": "Carburant restant"
+            },
+            "timestamp_info": {
+                "name": "Dernière mise à jour des infos"
+            },
+            "timestamp_status": {
+                "name": "Dernière mise à jour de l'état"
+            },
+            "last_location_update": {
+                "name": "Dernière mise à jour de la position"
+            },
+            "fuel_type": {
+                "name": "Type de carburant"
+            },
+            "battery_state_of_charge": {
+                "name": "État de charge de la batterie"
+            },
+            "time_to_fully_charge_l1": {
+                "name": "Temps de charge L1"
+            },
+            "hvac_temperature": {
+                "name": "Température de climatisation"
+            },
+            "privacy_mode": {
+                "name": "Mode confidentialité"
+            },
+            "vhr": {
+                "name": "Rapport de santé"
+            },
+            "maintenance": {
+                "name": "Historique d'entretien"
+            },
+            "charge_schedule": {
+                "name": "Programmation de charge"
+            },
+            "extrapolated_soc": {
+                "name": "Batterie extrapolée"
+            },
+            "charging_rate": {
+                "name": "Vitesse de charge"
+            }
+        },
+        "switch": {
+            "switch_engine": {
+                "name": "Moteur"
+            },
+            "switch_precondition": {
+                "name": "Préconditionnement"
+            },
+            "switch_hvac": {
+                "name": "Climatisation"
+            },
+            "switch_comfort": {
+                "name": "Confort"
+            },
+            "switch_charging": {
+                "name": "Charge"
+            },
+            "switch_trunk": {
+                "name": "Verrouiller le coffre"
+            }
+        }
+    },
     "services": {
         "update": {
             "name": "Mettre à jour",

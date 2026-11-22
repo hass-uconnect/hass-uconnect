@@ -297,9 +297,7 @@ class UconnectExtrapolatedSocSensor(RestoreEntity, SensorEntity, UconnectEntity)
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_extrapolated_soc"
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} Extrapolated Battery"
-        )
+        self._attr_translation_key = "extrapolated_soc"
         self._attr_native_unit_of_measurement = PERCENTAGE
         self._attr_device_class = SensorDeviceClass.BATTERY
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -968,9 +966,7 @@ class UconnectChargingRateSensor(SensorEntity, UconnectEntity):
         super().__init__(coordinator, vehicle)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_charging_rate"
-        self._attr_name = (
-            f"{vehicle.make} {vehicle.nickname or vehicle.model} Charging Rate"
-        )
+        self._attr_translation_key = "charging_rate"
         self._attr_native_unit_of_measurement = "%/h"
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_icon = "mdi:battery-charging-high"

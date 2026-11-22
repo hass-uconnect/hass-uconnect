@@ -13,7 +13,7 @@ from py_uconnect import ChargingLevel, Vehicle
 
 from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, should_add, vehicle_name
+from .entity import UconnectEntity, should_add
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class UconnectSelectSetChargingLevel(SelectEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_charging_level_preference"
-        self._attr_name = f"{vehicle_name(vehicle)} Charging Level Pref"
+        self._attr_translation_key = "charging_level_preference"
 
     @property
     def icon(self):
