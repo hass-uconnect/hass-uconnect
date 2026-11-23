@@ -15,7 +15,7 @@ from py_uconnect import APIError, UconnectError, Vehicle
 
 from .const import DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, vehicle_name
+from .entity import UconnectEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class UconnectVehicleImage(UconnectEntity, ImageEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
         ImageEntity.__init__(self, hass)
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_image"
-        self._attr_name = f"{vehicle_name(vehicle)} Image"
+        self._attr_translation_key = "image"
         self._attr_icon = "mdi:car"
         self._image_url = image_url
         cache_dir = Path(hass.config.path(CACHE_DIR))

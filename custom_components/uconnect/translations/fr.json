@@ -1,0 +1,547 @@
+{
+    "title": "Uconnect",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Authentification à l'API",
+                "description": "Configurez votre véhicule compatible Uconnect pour l'intégrer à Home Assistant.",
+                "data": {
+                    "username": "Nom d'utilisateur",
+                    "password": "Mot de passe",
+                    "brand_region": "Marque + région",
+                    "pin": "Code PIN",
+                    "disable_tls_verification": "Désactiver la vérification du certificat TLS"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Nouvelle authentification à l'API",
+                "description": "Votre compte n'arrive pas à s'authentifier. Cliquez sur Valider pour vous authentifier à nouveau."
+            }
+        },
+        "abort": {
+            "already_configured": "L'appareil est déjà configuré",
+            "reauth_successful": "La nouvelle authentification a réussi"
+        },
+        "error": {
+            "invalid_auth": "La connexion aux serveurs Uconnect a échoué. Vérifiez que votre véhicule n'utilise pas SiriusXM Guardian et que vos identifiants sont corrects.",
+            "cannot_connect": "Impossible de se connecter aux serveurs Uconnect. Réessayez plus tard.",
+            "unknown": "Erreur inattendue"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configuration de l'API",
+                "data": {
+                    "scan_interval": "Intervalle d'interrogation (min)",
+                    "pin": "Code PIN",
+                    "charging_refresh_interval": "Actualisation complète pendant la charge (min, 0 pour désactiver, 15 minimum)",
+                    "add_command_entities": "Ajouter les entités de commande (bouton/verrou/interrupteur)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "ignition_on": {
+                "name": "Contact"
+            },
+            "ev_running": {
+                "name": "Moteur électrique en marche"
+            },
+            "door_driver_locked": {
+                "name": "Porte conducteur"
+            },
+            "door_passenger_locked": {
+                "name": "Porte passager"
+            },
+            "door_rear_left_locked": {
+                "name": "Porte arrière gauche"
+            },
+            "door_rear_right_locked": {
+                "name": "Porte arrière droite"
+            },
+            "trunk_locked": {
+                "name": "Coffre"
+            },
+            "window_driver_closed": {
+                "name": "Vitre conducteur"
+            },
+            "window_passenger_closed": {
+                "name": "Vitre passager"
+            },
+            "window_rear_left_closed": {
+                "name": "Vitre arrière gauche"
+            },
+            "window_rear_right_closed": {
+                "name": "Vitre arrière droite"
+            },
+            "sunroof_closed": {
+                "name": "Toit ouvrant"
+            },
+            "liftgate_locked": {
+                "name": "Hayon"
+            },
+            "hvac_on": {
+                "name": "Climatisation active"
+            },
+            "plugged_in": {
+                "name": "Câble de recharge"
+            },
+            "charging": {
+                "name": "En charge"
+            },
+            "wheel_front_left_pressure_warning": {
+                "name": "Alerte pression pneu avant gauche"
+            },
+            "wheel_front_right_pressure_warning": {
+                "name": "Alerte pression pneu avant droit"
+            },
+            "wheel_rear_right_pressure_warning": {
+                "name": "Alerte pression pneu arrière droit"
+            },
+            "wheel_rear_left_pressure_warning": {
+                "name": "Alerte pression pneu arrière gauche"
+            },
+            "fuel_low": {
+                "name": "Carburant bas"
+            },
+            "ev_head_seat": {
+                "name": "Siège chauffant"
+            },
+            "ev_cabin_cond": {
+                "name": "Climatisation de l'habitacle"
+            },
+            "svla": {
+                "name": "Alerte véhicule volé"
+            }
+        },
+        "button": {
+            "button_location": {
+                "name": "Actualiser la position"
+            },
+            "button_deep_refresh": {
+                "name": "Actualisation complète"
+            },
+            "button_charge": {
+                "name": "Charger maintenant"
+            },
+            "button_lights": {
+                "name": "Feux"
+            },
+            "button_lights_horn": {
+                "name": "Feux et klaxon"
+            },
+            "update": {
+                "name": "Mettre à jour les données"
+            },
+            "reset_battery_learning": {
+                "name": "Réinitialiser l'apprentissage de la batterie"
+            }
+        },
+        "device_tracker": {
+            "location": {
+                "name": "Position"
+            }
+        },
+        "image": {
+            "image": {
+                "name": "Image"
+            }
+        },
+        "lock": {
+            "lock_doors": {
+                "name": "Verrouillage des portes"
+            }
+        },
+        "select": {
+            "charging_level_preference": {
+                "name": "Niveau de charge préféré"
+            }
+        },
+        "sensor": {
+            "odometer": {
+                "name": "Kilométrage"
+            },
+            "distance_to_empty": {
+                "name": "Autonomie"
+            },
+            "range_gas": {
+                "name": "Autonomie (carburant)"
+            },
+            "range_total": {
+                "name": "Autonomie (totale)"
+            },
+            "state_of_charge": {
+                "name": "Charge de la batterie haute tension"
+            },
+            "charging_level": {
+                "name": "Type de chargeur"
+            },
+            "battery_voltage": {
+                "name": "Batterie 12 V"
+            },
+            "time_to_fully_charge_l2": {
+                "name": "Temps de charge L2"
+            },
+            "time_to_fully_charge_l3": {
+                "name": "Temps de charge L3"
+            },
+            "distance_to_service": {
+                "name": "Distance avant entretien"
+            },
+            "days_to_service": {
+                "name": "Jours avant entretien"
+            },
+            "wheel_front_left_pressure": {
+                "name": "Pression pneu avant gauche"
+            },
+            "wheel_front_right_pressure": {
+                "name": "Pression pneu avant droit"
+            },
+            "wheel_rear_left_pressure": {
+                "name": "Pression pneu arrière gauche"
+            },
+            "wheel_rear_right_pressure": {
+                "name": "Pression pneu arrière droit"
+            },
+            "oil_level": {
+                "name": "Durée de vie de l'huile"
+            },
+            "fuel_amount": {
+                "name": "Carburant restant"
+            },
+            "timestamp_info": {
+                "name": "Dernière mise à jour des infos"
+            },
+            "timestamp_status": {
+                "name": "Dernière mise à jour de l'état"
+            },
+            "last_location_update": {
+                "name": "Dernière mise à jour de la position"
+            },
+            "fuel_type": {
+                "name": "Type de carburant"
+            },
+            "battery_state_of_charge": {
+                "name": "État de charge de la batterie"
+            },
+            "time_to_fully_charge_l1": {
+                "name": "Temps de charge L1"
+            },
+            "hvac_temperature": {
+                "name": "Température de climatisation"
+            },
+            "privacy_mode": {
+                "name": "Mode confidentialité"
+            },
+            "vhr": {
+                "name": "Rapport de santé"
+            },
+            "maintenance": {
+                "name": "Historique d'entretien"
+            },
+            "charge_schedule": {
+                "name": "Programmation de charge"
+            },
+            "extrapolated_soc": {
+                "name": "Batterie extrapolée"
+            },
+            "charging_rate": {
+                "name": "Vitesse de charge"
+            }
+        },
+        "switch": {
+            "switch_engine": {
+                "name": "Moteur"
+            },
+            "switch_precondition": {
+                "name": "Préconditionnement"
+            },
+            "switch_hvac": {
+                "name": "Climatisation"
+            },
+            "switch_comfort": {
+                "name": "Confort"
+            },
+            "switch_charging": {
+                "name": "Charge"
+            },
+            "switch_trunk": {
+                "name": "Verrouiller le coffre"
+            }
+        }
+    },
+    "services": {
+        "update": {
+            "name": "Mettre à jour",
+            "description": "Actualiser les données du véhicule depuis le cloud",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "engine_on": {
+            "name": "Moteur - Démarrer",
+            "description": "Démarrer le moteur",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "engine_off": {
+            "name": "Moteur - Arrêter",
+            "description": "Arrêter le moteur",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "comfort_on": {
+            "name": "Confort - Activer",
+            "description": "Activer le mode confort",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "comfort_off": {
+            "name": "Confort - Désactiver",
+            "description": "Désactiver le mode confort",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "hvac_on": {
+            "name": "Climatisation - Activer",
+            "description": "Activer la climatisation, avec une température cible en option",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                },
+                "temperature": {
+                    "name": "Température",
+                    "description": "Température cible de l'habitacle, dans l'unité configurée dans Home Assistant. Uniquement pour les véhicules compatibles"
+                }
+            }
+        },
+        "hvac_off": {
+            "name": "Climatisation - Désactiver",
+            "description": "Désactiver la climatisation",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "precond_on": {
+            "name": "Préconditionnement - Activer",
+            "description": "Activer le préconditionnement du véhicule",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "precond_off": {
+            "name": "Préconditionnement - Désactiver",
+            "description": "Désactiver le préconditionnement du véhicule",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "lights": {
+            "name": "Feux",
+            "description": "Faire clignoter les feux",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "lights_horn": {
+            "name": "Feux et klaxon",
+            "description": "Faire clignoter les feux et klaxonner",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "doors_lock": {
+            "name": "Verrouiller les portes",
+            "description": "Verrouiller les portes",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "doors_unlock": {
+            "name": "Déverrouiller les portes",
+            "description": "Déverrouiller les portes",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "trunk_lock": {
+            "name": "Verrouiller le coffre",
+            "description": "Verrouiller le coffre",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "trunk_unlock": {
+            "name": "Déverrouiller le coffre",
+            "description": "Déverrouiller le coffre",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "liftgate_lock": {
+            "name": "Verrouiller le hayon",
+            "description": "Verrouiller le hayon",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "liftgate_unlock": {
+            "name": "Déverrouiller le hayon",
+            "description": "Déverrouiller le hayon",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "cabin_ventilation": {
+            "name": "Ventilation de l'habitacle",
+            "description": "Activer la ventilation de l'habitacle",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "charge_now": {
+            "name": "Charger maintenant",
+            "description": "Lancer la charge du véhicule",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "charge_now_v4": {
+            "name": "Charger maintenant (V4)",
+            "description": "Lancer la charge du véhicule avec l'API V4",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "deep_refresh": {
+            "name": "Actualisation complète",
+            "description": "Forcer la mise à jour de la charge et des autres paramètres du véhicule",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "deep_refresh_v2": {
+            "name": "Actualisation complète (V2)",
+            "description": "Forcer la mise à jour de la charge et des autres paramètres du véhicule avec l'API V2",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "refresh_location": {
+            "name": "Actualiser la position",
+            "description": "Mettre à jour la position du véhicule",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "set_charge_schedule": {
+            "name": "Définir la programmation de charge",
+            "description": "Définir la programmation de charge du véhicule électrique",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                },
+                "schedule": {
+                    "name": "Programmation",
+                    "description": "Les programmations : une liste, ou un objet qui les contient comme l'attribut schedules du capteur Charge Schedule"
+                }
+            }
+        },
+        "send_destination": {
+            "name": "Envoyer une destination",
+            "description": "Envoyer une destination au système de navigation du véhicule",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                },
+                "latitude": {
+                    "name": "Latitude",
+                    "description": "Latitude de la destination"
+                },
+                "longitude": {
+                    "name": "Longitude",
+                    "description": "Longitude de la destination"
+                },
+                "name": {
+                    "name": "Nom",
+                    "description": "Nom de la destination affiché dans le véhicule"
+                }
+            }
+        }
+    }
+}

@@ -8,6 +8,116 @@ const WS_TYPE = "uconnect/vehicle_cards";
 const CARD_TAG = "uconnect-vehicle-card";
 const CACHE_MS = 30_000;
 
+// Card texts, in the language of the Home Assistant user (English fallback)
+const STRINGS = {
+  en: {
+    card_name: "Uconnect Vehicle",
+    card_description: "Vehicle card with indicators, SOC/range, image, map and quick info",
+    device_id: "Vehicle",
+    license_plate: "License plate (shown instead of VIN)",
+    show_indicators: "Show indicator row",
+    show_range: "Show SOC and range bar",
+    show_image: "Show vehicle image",
+    show_map: "Show mini map",
+    show_buttons: "Show quick info buttons",
+    select_vehicle: "Select a vehicle in the card editor.",
+    vehicle_not_found: "Vehicle not found yet. Try again in a few seconds.",
+    no_tracker: "No vehicle tracker entity available",
+    tracker_unavailable: "Tracker entity unavailable",
+    loading_map: "Loading map\u2026",
+    map_failed: "Unable to load map",
+    location_unavailable: "Location unavailable",
+    home: "Home",
+    away: "Away",
+    doors_locked: "Doors: Locked",
+    doors_unlocked: "Doors: Unlocked",
+    windows_closed: "Windows: Closed",
+    windows_open: "Windows: {count} open",
+    trunk_locked: "Trunk: Locked",
+    trunk_unlocked: "Trunk: Unlocked",
+    liftgate_locked: "Liftgate: Locked",
+    liftgate_unlocked: "Liftgate: Unlocked",
+    charging: "Charging",
+    plugged_in: "Plugged in",
+    not_plugged_in: "Not plugged in",
+    not_charging: "Not charging",
+    ignition_on: "Ignition: On",
+    ignition_off: "Ignition: Off",
+    tires: "Tires",
+    tire: "Tire {position}",
+    tire_fl: "FL",
+    tire_fr: "FR",
+    tire_rl: "RL",
+    tire_rr: "RR",
+    warning: "Warning",
+    ok: "OK",
+    location: "Location",
+    range: "Range",
+    fuel_range: "Fuel Range",
+    battery_12v: "12V Battery",
+    odometer: "Odometer",
+  },
+  fr: {
+    card_name: "Véhicule Uconnect",
+    card_description: "Carte du véhicule avec indicateurs, batterie/autonomie, image, carte et infos rapides",
+    device_id: "Véhicule",
+    license_plate: "Plaque d'immatriculation (affichée à la place du VIN)",
+    show_indicators: "Afficher la ligne d'indicateurs",
+    show_range: "Afficher la barre de batterie et d'autonomie",
+    show_image: "Afficher l'image du véhicule",
+    show_map: "Afficher la mini-carte",
+    show_buttons: "Afficher les boutons d'infos rapides",
+    select_vehicle: "Choisissez un véhicule dans l'éditeur de la carte.",
+    vehicle_not_found: "Véhicule pas encore trouvé. Réessayez dans quelques secondes.",
+    no_tracker: "Aucune entité de localisation du véhicule",
+    tracker_unavailable: "Entité de localisation indisponible",
+    loading_map: "Chargement de la carte\u2026",
+    map_failed: "Impossible de charger la carte",
+    location_unavailable: "Position indisponible",
+    home: "Maison",
+    away: "Absent",
+    doors_locked: "Portes : verrouillées",
+    doors_unlocked: "Portes : déverrouillées",
+    windows_closed: "Vitres : fermées",
+    windows_open: "Vitres : {count} ouverte(s)",
+    trunk_locked: "Coffre : verrouillé",
+    trunk_unlocked: "Coffre : déverrouillé",
+    liftgate_locked: "Hayon : verrouillé",
+    liftgate_unlocked: "Hayon : déverrouillé",
+    charging: "En charge",
+    plugged_in: "Branché",
+    not_plugged_in: "Non branché",
+    not_charging: "Pas en charge",
+    ignition_on: "Contact : mis",
+    ignition_off: "Contact : coupé",
+    tires: "Pneus",
+    tire: "Pneu {position}",
+    tire_fl: "AVG",
+    tire_fr: "AVD",
+    tire_rl: "ARG",
+    tire_rr: "ARD",
+    warning: "Alerte",
+    ok: "OK",
+    location: "Position",
+    range: "Autonomie",
+    fuel_range: "Autonomie carburant",
+    battery_12v: "Batterie 12 V",
+    odometer: "Kilométrage",
+  },
+};
+
+// The editor and the card picker have no hass object, Home Assistant sets
+// the lang attribute of the page to the language of the user
+const userLanguage = (hass) =>
+  hass?.locale?.language || hass?.language || document.documentElement.lang || navigator.language || "en";
+
+const translate = (hass, key, vars = {}) => {
+  const language = String(userLanguage(hass)).toLowerCase();
+  const strings = STRINGS[language] || STRINGS[language.split("-")[0]] || STRINGS.en;
+  const text = strings[key] ?? STRINGS.en[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? ""));
+};
+
 const ensureCustomCardsArray = () => {
   window.customCards = window.customCards || [];
   return window.customCards;
@@ -75,12 +185,15 @@ const iconBadge = (icon, statusClass = "", entityId = "", title = "") => `
   </button>
 `;
 
-const humanizeLocationState = (rawState) => {
-  if (rawState === undefined || rawState === null) return "Location unavailable";
+const humanizeLocationState = (stateObj, hass) => {
+  const rawState = stateObj?.state;
+  if (rawState === undefined || rawState === null) return translate(hass, "location_unavailable");
   const normalized = String(rawState).trim().toLowerCase();
-  if (!normalized || normalized === "unknown" || normalized === "unavailable") return "Location unavailable";
-  if (normalized === "not_home") return "Away";
-  if (normalized === "home") return "Home";
+  if (!normalized || normalized === "unknown" || normalized === "unavailable") return translate(hass, "location_unavailable");
+  // Translated by Home Assistant itself (home, away, zone names)
+  if (typeof hass?.formatEntityState === "function") return hass.formatEntityState(stateObj);
+  if (normalized === "not_home") return translate(hass, "away");
+  if (normalized === "home") return translate(hass, "home");
   return String(rawState).replaceAll("_", " ");
 };
 
@@ -127,16 +240,8 @@ class UconnectVehicleCard extends HTMLElement {
         { name: "show_map", selector: { boolean: {} } },
         { name: "show_buttons", selector: { boolean: {} } },
       ],
-      computeLabel: (schema) => {
-        if (schema.name === "device_id") return "Vehicle";
-        if (schema.name === "license_plate") return "License plate (shown instead of VIN)";
-        if (schema.name === "show_indicators") return "Show indicator row";
-        if (schema.name === "show_range") return "Show SOC and range bar";
-        if (schema.name === "show_image") return "Show vehicle image";
-        if (schema.name === "show_map") return "Show mini map";
-        if (schema.name === "show_buttons") return "Show quick info buttons";
-        return undefined;
-      },
+      computeLabel: (schema) =>
+        STRINGS.en[schema.name] !== undefined ? translate(null, schema.name) : undefined,
     };
   }
 
@@ -523,7 +628,7 @@ class UconnectVehicleCard extends HTMLElement {
       this._cachedMapTracker = null;
       target.innerHTML = `
         <div class="map">
-          <div class="map-fallback">No vehicle tracker entity available</div>
+          <div class="map-fallback">${escapeHtml(translate(hass, "no_tracker"))}</div>
         </div>
       `;
       return;
@@ -534,7 +639,7 @@ class UconnectVehicleCard extends HTMLElement {
       this._cachedMapTracker = null;
       target.innerHTML = `
         <div class="map">
-          <div class="map-fallback">Tracker entity unavailable</div>
+          <div class="map-fallback">${escapeHtml(translate(hass, "tracker_unavailable"))}</div>
         </div>
       `;
       return;
@@ -555,7 +660,7 @@ class UconnectVehicleCard extends HTMLElement {
     wrapper.className = "map";
     const mapMount = document.createElement("div");
     mapMount.className = "map-mount";
-    mapMount.innerHTML = `<div class="map-fallback">Loading map\u2026</div>`;
+    mapMount.innerHTML = `<div class="map-fallback">${escapeHtml(translate(hass, "loading_map"))}</div>`;
     wrapper.appendChild(mapMount);
     target.replaceChildren(wrapper);
 
@@ -563,7 +668,7 @@ class UconnectVehicleCard extends HTMLElement {
       if (!target.isConnected) return;
       if (this._mapRenderToken !== renderToken) return;
       if (!mapCard) {
-        mapMount.innerHTML = `<div class="map-fallback">Unable to load map</div>`;
+        mapMount.innerHTML = `<div class="map-fallback">${escapeHtml(translate(hass, "map_failed"))}</div>`;
         return;
       }
       this._cachedMapCard = mapCard;
@@ -584,14 +689,14 @@ class UconnectVehicleCard extends HTMLElement {
     const deviceId = cfg.device_id;
 
     if (!deviceId) {
-      this._renderMessage("Select a vehicle in the card editor.");
+      this._renderMessage(translate(hass, "select_vehicle"));
       return;
     }
 
     const vehicles = this._vehicles || [];
     const vehicle = vehicles.find((v) => v && v.device_id === deviceId);
     if (!vehicle) {
-      this._renderMessage("Vehicle not found yet. Try again in a few seconds.");
+      this._renderMessage(translate(hass, "vehicle_not_found"));
       return;
     }
 
@@ -638,7 +743,6 @@ class UconnectVehicleCard extends HTMLElement {
 
     // Vehicles have either a trunk or a liftgate
     const trunkKey = entities.trunk ? "trunk" : "liftgate";
-    const trunkName = trunkKey === "trunk" ? "Trunk" : "Liftgate";
     const trunkLocked = hasUsableState(read(trunkKey)) && !isOnState(read(trunkKey));
     const trunkEntity = entities[trunkKey] || "";
 
@@ -674,31 +778,31 @@ class UconnectVehicleCard extends HTMLElement {
           icon: "mdi:car-door-lock",
           stateClass: allDoorsLocked ? "ok" : "alert",
           entity: anyDoorEntity,
-          title: allDoorsLocked ? "Doors: Locked" : "Doors: Unlocked",
+          title: translate(hass, allDoorsLocked ? "doors_locked" : "doors_unlocked"),
         },
         {
           icon: allWindowsClosed ? "mdi:car-windshield" : "mdi:car-windshield-outline",
           stateClass: allWindowsClosed ? "ok" : openWindows > 0 ? "alert" : "",
           entity: windowEntity,
-          title: allWindowsClosed ? "Windows: Closed" : `Windows: ${openWindows} open`,
+          title: allWindowsClosed ? translate(hass, "windows_closed") : translate(hass, "windows_open", { count: openWindows }),
         },
         {
           icon: "mdi:lock",
           stateClass: trunkLocked ? "ok" : hasUsableState(read(trunkKey)) ? "alert" : "",
           entity: trunkEntity,
-          title: trunkLocked ? `${trunkName}: Locked` : `${trunkName}: Unlocked`,
+          title: translate(hass, `${trunkKey}_${trunkLocked ? "locked" : "unlocked"}`),
         },
         {
           icon: "mdi:ev-station",
           stateClass: chargingActive ? "ok charging" : pluggedIn ? "ok" : "",
           entity: chargingEntity,
-          title: chargingActive ? "Charging" : pluggedIn ? "Plugged in" : "Not plugged in",
+          title: translate(hass, chargingActive ? "charging" : pluggedIn ? "plugged_in" : "not_plugged_in"),
         },
         {
           icon: "mdi:engine",
           stateClass: ignitionOn ? "ok" : "",
           entity: ignitionEntity,
-          title: ignitionOn ? "Ignition: On" : "Ignition: Off",
+          title: translate(hass, ignitionOn ? "ignition_on" : "ignition_off"),
         },
       ];
 
@@ -767,8 +871,8 @@ class UconnectVehicleCard extends HTMLElement {
       // Tire status: use pressure values if available, fall back to warning sensors
       const tireKeys = ["tire_fl", "tire_fr", "tire_rl", "tire_rr"];
       const tireWarnKeys = ["tire_fl_warn", "tire_fr_warn", "tire_rl_warn", "tire_rr_warn"];
-      const tireLabels = { tire_fl: "FL", tire_fr: "FR", tire_rl: "RL", tire_rr: "RR",
-        tire_fl_warn: "FL", tire_fr_warn: "FR", tire_rl_warn: "RL", tire_rr_warn: "RR" };
+      // tire_fl and tire_fl_warn are both the front left tire
+      const tireName = (key) => translate(hass, "tire", { position: translate(hass, key.replace("_warn", "")) });
       const tireEntries = tireKeys
         .map((key) => {
           const obj = read(key);
@@ -781,7 +885,7 @@ class UconnectVehicleCard extends HTMLElement {
 
       let tireAlert = false;
       let tireValue = "\u2014";
-      let tireLabel = "Tires";
+      let tireLabel = translate(hass, "tires");
       let tireEntity = entities.tire_fl || entities.tire_fr
         || entities.tire_fl_warn || entities.tire_fr_warn || "";
 
@@ -796,7 +900,7 @@ class UconnectVehicleCard extends HTMLElement {
         tireValue = tireAlert
           ? `${formatPressure(lowTire.value)} ${lowTire.unit}`.trim()
           : `${formatPressure(tireAvg)} ${tireEntries[0]?.unit || ""}`.trim();
-        tireLabel = tireAlert ? `Tire ${tireLabels[lowTire.key]}` : "Tires";
+        tireLabel = tireAlert ? tireName(lowTire.key) : translate(hass, "tires");
         tireEntity = tireAlert ? (entities[lowTire.key] || "") : tireEntity;
       } else {
         // No pressure data: use warning binary sensors (on = problem)
@@ -807,11 +911,11 @@ class UconnectVehicleCard extends HTMLElement {
           const failingTire = warnEntries.find((t) => isOnState(t.obj));
           if (failingTire) {
             tireAlert = true;
-            tireLabel = `Tire ${tireLabels[failingTire.key]}`;
-            tireValue = "Warning";
+            tireLabel = tireName(failingTire.key);
+            tireValue = translate(hass, "warning");
             tireEntity = entities[failingTire.key] || "";
           } else {
-            tireValue = "OK";
+            tireValue = translate(hass, "ok");
             tireEntity = entities[warnEntries[0].key] || "";
           }
         }
@@ -820,20 +924,20 @@ class UconnectVehicleCard extends HTMLElement {
       const quickItems = [
         {
           icon: "mdi:map-marker",
-          label: "Location",
-          value: humanizeLocationState(read("device_tracker")?.state),
+          label: translate(hass, "location"),
+          value: humanizeLocationState(read("device_tracker"), hass),
           entity: entities.device_tracker || "",
         },
         {
           icon: rangeIcon,
-          label: hasSoc ? "Range" : "Fuel Range",
+          label: translate(hass, hasSoc ? "range" : "fuel_range"),
           value: rangeText,
           entity: rangeEntity,
         },
         {
           icon: "mdi:ev-station",
-          label: "Charging",
-          value: chargingActive ? "Charging" : pluggedIn ? "Plugged in" : "Not charging",
+          label: translate(hass, "charging"),
+          value: translate(hass, chargingActive ? "charging" : pluggedIn ? "plugged_in" : "not_charging"),
           entity: chargingEntity,
         },
         {
@@ -845,13 +949,13 @@ class UconnectVehicleCard extends HTMLElement {
         },
         {
           icon: "mdi:car-battery",
-          label: "12V Battery",
+          label: translate(hass, "battery_12v"),
           value: formatState(read("battery_voltage"), hass),
           entity: entities.battery_voltage || "",
         },
         {
           icon: "mdi:counter",
-          label: "Odometer",
+          label: translate(hass, "odometer"),
           value: formatState(read("odometer"), hass),
           entity: entities.odometer || "",
         },
@@ -908,8 +1012,8 @@ const cards = ensureCustomCardsArray();
 if (!cards.some((c) => c && c.type === CARD_TAG)) {
   cards.push({
     type: CARD_TAG,
-    name: "Uconnect Vehicle",
-    description: "Vehicle card with indicators, SOC/range, image, map and quick info",
+    name: translate(null, "card_name"),
+    description: translate(null, "card_description"),
     preview: true,
   });
 }

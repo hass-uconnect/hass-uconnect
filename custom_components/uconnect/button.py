@@ -25,7 +25,7 @@ from py_uconnect.command import (
 
 from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, should_add, vehicle_name
+from .entity import UconnectEntity, should_add
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -38,35 +38,35 @@ class UconnectButtonEntityDescription(ButtonEntityDescription):
 BUTTON_DESCRIPTIONS: Final[tuple[UconnectButtonEntityDescription, ...]] = (
     UconnectButtonEntityDescription(
         key="button_location",
-        name="Refresh Location",
+        translation_key="button_location",
         icon="mdi:crosshairs-gps",
         command=COMMAND_REFRESH_LOCATION,
         device_class=ButtonDeviceClass.UPDATE,
     ),
     UconnectButtonEntityDescription(
         key="button_deep_refresh",
-        name="Deep Refresh",
+        translation_key="button_deep_refresh",
         icon="mdi:refresh",
         command=COMMAND_DEEP_REFRESH,
         device_class=ButtonDeviceClass.UPDATE,
     ),
     UconnectButtonEntityDescription(
         key="button_charge",
-        name="Charge Now",
+        translation_key="button_charge",
         icon="mdi:ev-station",
         command=COMMAND_CHARGE,
         device_class=ButtonDeviceClass.UPDATE,
     ),
     UconnectButtonEntityDescription(
         key="button_lights",
-        name="Lights",
+        translation_key="button_lights",
         icon="mdi:car-light-dimmed",
         command=COMMAND_LIGHTS,
         device_class=ButtonDeviceClass.UPDATE,
     ),
     UconnectButtonEntityDescription(
         key="button_lights_horn",
-        name="Lights & Horn",
+        translation_key="button_lights_horn",
         icon="mdi:bugle",
         command=COMMAND_LIGHTS_HORN,
         device_class=ButtonDeviceClass.UPDATE,
@@ -120,7 +120,6 @@ class UconnectButton(ButtonEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self.entity_description: UconnectButtonEntityDescription = description
-        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
 
     @property
@@ -141,7 +140,7 @@ class UconnectButtonUpdate(ButtonEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
-        self._attr_name = f"{vehicle_name(vehicle)} Update Data"
+        self._attr_translation_key = "update"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_update"
 
     @property
@@ -162,7 +161,7 @@ class UconnectResetLearningButton(ButtonEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
-        self._attr_name = f"{vehicle_name(vehicle)} Reset Battery Learning"
+        self._attr_translation_key = "reset_battery_learning"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_reset_battery_learning"
         self._attr_icon = "mdi:head-sync-outline"
 

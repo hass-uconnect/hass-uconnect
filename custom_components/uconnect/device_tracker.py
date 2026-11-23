@@ -10,7 +10,7 @@ from py_uconnect import Vehicle
 
 from .const import DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, should_add, vehicle_name
+from .entity import UconnectEntity, should_add
 
 
 async def async_setup_entry(
@@ -40,7 +40,7 @@ class UconnectTracker(TrackerEntity, UconnectEntity):
     ):
         UconnectEntity.__init__(self, coordinator, vehicle)
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_location"
-        self._attr_name = f"{vehicle_name(vehicle)} Location"
+        self._attr_translation_key = "location"
         self._attr_icon = "mdi:map-marker-outline"
 
     @property

@@ -34,7 +34,7 @@ from py_uconnect.command import (
 
 from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, should_add, vehicle_name
+from .entity import UconnectEntity, should_add
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class UconnectSwitchEntityDescription(SwitchEntityDescription):
 SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     UconnectSwitchEntityDescription(
         key="switch_engine",
-        name="Engine",
+        translation_key="switch_engine",
         on_icon="mdi:engine",
         command_on=COMMAND_ENGINE_ON,
         command_off=COMMAND_ENGINE_OFF,
@@ -63,7 +63,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     ),
     UconnectSwitchEntityDescription(
         key="switch_precondition",
-        name="Precondition",
+        translation_key="switch_precondition",
         on_icon="mdi:air-conditioner",
         command_on=COMMAND_PRECOND_ON,
         command_off=COMMAND_PRECOND_OFF,
@@ -71,7 +71,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     ),
     UconnectSwitchEntityDescription(
         key="switch_hvac",
-        name="HVAC",
+        translation_key="switch_hvac",
         on_icon="mdi:hvac",
         command_on=COMMAND_HVAC_ON,
         command_off=COMMAND_HVAC_OFF,
@@ -80,7 +80,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     ),
     UconnectSwitchEntityDescription(
         key="switch_comfort",
-        name="Comfort",
+        translation_key="switch_comfort",
         on_icon="mdi:air-conditioner",
         command_on=COMMAND_COMFORT_ON,
         command_off=COMMAND_COMFORT_OFF,
@@ -88,7 +88,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     ),
     UconnectSwitchEntityDescription(
         key="switch_charging",
-        name="Charging",
+        translation_key="switch_charging",
         on_icon="mdi:battery-charging",
         off_icon="mdi:battery-alert",
         command_on=COMMAND_CHARGE,
@@ -97,7 +97,7 @@ SWITCH_DESCRIPTIONS: Final[tuple[UconnectSwitchEntityDescription, ...]] = (
     ),
     UconnectSwitchEntityDescription(
         key="switch_trunk",
-        name="Lock Trunk",
+        translation_key="switch_trunk",
         on_icon="mdi:lock",
         off_icon="mdi:lock-open",
         command_on=COMMAND_TRUNK_LOCK,
@@ -147,7 +147,6 @@ class UconnectSwitch(SwitchEntity, UconnectEntity):
         UconnectEntity.__init__(self, coordinator, vehicle)
 
         self.entity_description: UconnectSwitchEntityDescription = description
-        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
 
     @property

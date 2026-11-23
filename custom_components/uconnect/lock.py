@@ -17,7 +17,7 @@ from py_uconnect.command import COMMAND_DOORS_LOCK, COMMAND_DOORS_UNLOCK
 
 from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
-from .entity import UconnectEntity, should_add, vehicle_name
+from .entity import UconnectEntity, should_add
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class UconnectLockEntityDescription(LockEntityDescription):
 LOCK_DESCRIPTIONS: Final[tuple[UconnectLockEntityDescription, ...]] = (
     UconnectLockEntityDescription(
         key="lock_doors",
-        name="Doors Lock",
+        translation_key="lock_doors",
         icon_locked="mdi:car-door-lock",
         icon_unlocked="mdi:car-door-lock-open",
         command_on=COMMAND_DOORS_LOCK,
@@ -85,7 +85,6 @@ class UconnectLock(LockEntity, UconnectEntity):
 
         self.entity_description: UconnectLockEntityDescription = description
         self._attr_unique_id = f"{DOMAIN}_{vehicle.vin}_{description.key}"
-        self._attr_name = f"{vehicle_name(vehicle)} {description.name}"
 
     @property
     def icon(self):

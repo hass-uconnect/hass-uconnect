@@ -13,7 +13,7 @@ from .coordinator import UconnectDataUpdateCoordinator
 
 
 def vehicle_name(vehicle: Vehicle) -> str:
-    """Return the name of the vehicle, the prefix of its entity names."""
+    """Return the name of the vehicle, the device name."""
 
     return f"{vehicle.make} {vehicle.nickname or vehicle.model}"
 
@@ -38,6 +38,9 @@ def should_add(
 
 class UconnectEntity(CoordinatorEntity[UconnectDataUpdateCoordinator]):
     """Class for base entity for Uconnect integration."""
+
+    # Entity names are translated (translation_key), prefixed by the device name
+    _attr_has_entity_name = True
 
     def __init__(
         self, coordinator: UconnectDataUpdateCoordinator, vehicle: Vehicle
