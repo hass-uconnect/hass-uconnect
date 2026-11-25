@@ -15,7 +15,10 @@
             },
             "reauth_confirm": {
                 "title": "API Reauthentication",
-                "description": "Your account is unable to authenticate. Click Submit to reauthenticate."
+                "description": "The login to the {brand} account {username} failed. Enter its password to authenticate again. To use another account or brand, remove this entry and add a new one.",
+                "data": {
+                    "password": "Password"
+                }
             }
         },
         "abort": {

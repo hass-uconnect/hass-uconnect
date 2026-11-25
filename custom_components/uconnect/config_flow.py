@@ -46,6 +46,10 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
+# Re-authentication keeps the account and brand of the entry, they are part of
+# its title and unique ID
+STEP_REAUTH_DATA_SCHEMA = vol.Schema({vol.Required(CONF_PASSWORD): str})
+
 OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Required(
@@ -60,6 +64,20 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Required(CONF_ADD_COMMAND_ENTITIES): bool,
     }
 )
+
+
+def entry_title(brand_region: int, username: str) -> str:
+    """Return the title of an entry for the given brand and username"""
+
+    return f"{BRANDS[brand_region]} {username}"
+
+
+def entry_unique_id(brand_region: int, username: str) -> str:
+    """Return the unique ID of an entry for the given brand and username"""
+
+    return hashlib.sha256(
+        entry_title(brand_region, username).encode("utf-8")
+    ).hexdigest()
 
 
 async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> None:
@@ -88,6 +106,22 @@ async def validate_input(hass: HomeAssistant, user_input: dict[str, Any]) -> Non
         raise CannotConnect from err
     finally:
         session.detach()
+
+
+async def async_try_login(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, str]:
+    """Log in with the given entry data, return the errors to show in the form"""
+
+    try:
+        await validate_input(hass, data)
+    except InvalidAuth:
+        return {"base": "invalid_auth"}
+    except CannotConnect:
+        return {"base": "cannot_connect"}
+    except Exception:
+        _LOGGER.exception("Unexpected exception")
+        return {"base": "unknown"}
+
+    return {}
 
 
 class UconnectOptionFlowHandler(config_entries.OptionsFlow):
@@ -132,31 +166,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
             )
 
-        errors = {}
+        if not (errors := await async_try_login(self.hass, user_input)):
+            brand_region = user_input[CONF_BRAND_REGION]
+            username = user_input[CONF_USERNAME]
 
-        try:
-            await validate_input(self.hass, user_input)
-        except InvalidAuth:
-            errors["base"] = "invalid_auth"
-        except CannotConnect:
-            errors["base"] = "cannot_connect"
-        except Exception:
-            _LOGGER.exception("Unexpected exception")
-            errors["base"] = "unknown"
-        else:
-            if self.source == config_entries.SOURCE_REAUTH:
-                return self.async_update_reload_and_abort(
-                    self._get_reauth_entry(), data=user_input
-                )
-
-            title = (
-                f"{BRANDS[user_input[CONF_BRAND_REGION]]} {user_input[CONF_USERNAME]}"
-            )
-            await self.async_set_unique_id(
-                hashlib.sha256(title.encode("utf-8")).hexdigest()
-            )
+            await self.async_set_unique_id(entry_unique_id(brand_region, username))
             self._abort_if_unique_id_configured()
-            return self.async_create_entry(title=title, data=user_input)
+            return self.async_create_entry(
+                title=entry_title(brand_region, username), data=user_input
+            )
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
@@ -171,13 +189,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Dialog that informs the user that reauth is required."""
-        if user_input is None:
-            return self.async_show_form(
-                step_id="reauth_confirm",
-                data_schema=vol.Schema({}),
-            )
-        return await self.async_step_user()
+        """Ask for the password of the account the entry was set up with.
+
+        The username and brand are kept. When the form asked for them again,
+        an entry could end up using another brand or account while keeping
+        its title, and get no vehicles.
+        """
+
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            data = {**entry.data, CONF_PASSWORD: user_input[CONF_PASSWORD]}
+            if not (errors := await async_try_login(self.hass, data)):
+                return self.async_update_reload_and_abort(entry, data=data)
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=STEP_REAUTH_DATA_SCHEMA,
+            errors=errors,
+            description_placeholders={
+                "username": entry.data[CONF_USERNAME],
+                "brand": BRANDS[entry.data[CONF_BRAND_REGION]],
+            },
+        )
 
 
 class InvalidAuth(HomeAssistantError):

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from homeassistant.const import Platform
+import logging
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .config_flow import entry_unique_id
+from .const import BRANDS, CONF_BRAND_REGION, DOMAIN
 from .coordinator import (
     UconnectConfigEntry,
     UconnectDataUpdateCoordinator,
@@ -18,6 +22,8 @@ from .frontend_cards import (
     async_unload_frontend_cards_if_last_entry,
 )
 from .services import async_setup_services, async_unload_services
+
+_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -38,10 +44,58 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+def warn_if_changed_by_reauth(config_entry: ConfigEntry) -> None:
+    """Warn if the brand or username of the entry differs from its setup.
+
+    The unique ID is derived from the brand and username the entry was set up
+    with. The re-authentication form of earlier versions asked for them again
+    and could change them without updating the title, so the entry used
+    another brand or account than its title shows and could get no vehicles.
+    """
+
+    username = config_entry.data[CONF_USERNAME]
+    brand = BRANDS[config_entry.data[CONF_BRAND_REGION]]
+
+    if config_entry.unique_id in (
+        None,
+        entry_unique_id(config_entry.data[CONF_BRAND_REGION], username),
+    ):
+        return
+
+    original = next(
+        (
+            name
+            for number, name in BRANDS.items()
+            if entry_unique_id(number, username) == config_entry.unique_id
+        ),
+        None,
+    )
+
+    # The username is not logged, it is an email address
+    if original:
+        _LOGGER.warning(
+            "This Uconnect entry was set up for %s but logs in with %s, which a "
+            "re-authentication changed. If its vehicles are missing, remove the "
+            "entry and add it again with %s",
+            original,
+            brand,
+            original,
+        )
+    else:
+        _LOGGER.warning(
+            "This %s Uconnect entry logs in with another username than it was set "
+            "up with, which a re-authentication changed. If its vehicles are "
+            "missing, remove the entry and add it again",
+            brand,
+        )
+
+
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: UconnectConfigEntry
 ) -> bool:
     """Set up Uconnect from a config entry."""
+
+    warn_if_changed_by_reauth(config_entry)
 
     coordinator = UconnectDataUpdateCoordinator(hass, config_entry)
 

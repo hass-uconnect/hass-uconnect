@@ -122,6 +122,7 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         self.svla_data: dict[str, dict] = {}
         self._extra_data_updated: datetime | None = None
         self._unsupported: set[tuple[str, str]] = set()
+        self._warned_no_vehicles = False
 
         self.client = Client(
             email=config_entry.data[CONF_USERNAME],
@@ -200,6 +201,8 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator[bool]):
                 raise UpdateFailed(f"Initial data fetch failed: {err}") from err
             # On subsequent runs, log and fall back to cached data
             _LOGGER.warning("Update failed, falling back to cached data: %s", err)
+        else:
+            self._warn_if_no_vehicles()
 
         # Also after a failure: the vehicles may have been partly updated
         for vehicle in self.client.vehicles.values():
@@ -208,6 +211,26 @@ class UconnectDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         await self._async_update_extra_data()
 
         return True
+
+    def _warn_if_no_vehicles(self) -> None:
+        """Warn once when the account has no vehicles.
+
+        The API returns an empty list rather than an error when the account
+        has no vehicles for the brand, e.g. when the entry uses the wrong
+        brand or region, which otherwise only shows as unavailable entities.
+        """
+
+        if self.client.vehicles:
+            self._warned_no_vehicles = False
+            return
+
+        if not self._warned_no_vehicles:
+            self._warned_no_vehicles = True
+            _LOGGER.warning(
+                "No vehicles found in the %s account. If the official app shows "
+                "the vehicle, check that the entry uses the right brand and region",
+                BRANDS[self.config_entry.data[CONF_BRAND_REGION]],
+            )
 
     async def _async_update_extra_data(self) -> None:
         """Fetch the data that rarely changes (VHR, maintenance, SVLA).

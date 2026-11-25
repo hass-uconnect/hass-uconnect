@@ -31,6 +31,7 @@ from py_uconnect.models import (
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.uconnect.config_flow import entry_unique_id
 from custom_components.uconnect.const import (
     CONF_ADD_COMMAND_ENTITIES,
     CONF_BRAND_REGION,
@@ -182,7 +183,7 @@ def config_entry(hass: HomeAssistant) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="FIAT_EU user@example.com",
-        unique_id="0123456789abcdef",
+        unique_id=entry_unique_id(1, "user@example.com"),
         data={
             CONF_USERNAME: "user@example.com",
             CONF_PASSWORD: "secret",

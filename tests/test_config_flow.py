@@ -149,21 +149,41 @@ async def test_reauth_flow(
     fake_client.refresh.side_effect = AuthenticationError("Invalid password")
     assert not await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
+    original = dict(config_entry.data)
 
     (flow,) = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
-    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {})
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert flow["step_id"] == "reauth_confirm"
 
+    # A rejected password shows the form again, which only asks for the
+    # password and names the account and brand of the entry
+    mock_api.return_value.login.side_effect = AuthenticationError("Invalid password")
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {CONF_PASSWORD: "wrong"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "invalid_auth"}
+    assert set(result["data_schema"].schema) == {CONF_PASSWORD}
+    placeholders = result["description_placeholders"]
+    assert placeholders["username"] == "user@example.com"
+    assert placeholders["brand"] == "FIAT_EU"
+    assert config_entry.data == original
+
+    mock_api.return_value.login.side_effect = None
     fake_client.refresh.side_effect = fake_client._refresh
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {**USER_INPUT, CONF_PASSWORD: "new-secret"}
+        result["flow_id"], {CONF_PASSWORD: "new-secret"}
     )
     await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
-    assert config_entry.data[CONF_PASSWORD] == "new-secret"
+    # Only the password changes, the entry keeps its account and brand
+    assert config_entry.data == {**original, CONF_PASSWORD: "new-secret"}
+    kwargs = mock_api.call_args.kwargs
+    assert kwargs["email"] == "user@example.com"
+    assert kwargs["password"] == "new-secret"
+    assert kwargs["brand"].name == "FIAT_EU"
     assert config_entry.state is ConfigEntryState.LOADED
 
     await hass.config_entries.async_unload(config_entry.entry_id)

@@ -157,3 +157,36 @@ async def test_no_deep_refresh_without_pin(
     sensor = setup_integration.runtime_data.extrapolated_soc_sensors[EV_VIN]
 
     assert not sensor._can_deep_refresh()
+
+
+async def test_warning_when_account_has_no_vehicles(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    fake_client: FakeClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    coordinator = setup_integration.runtime_data
+    message = "No vehicles found in the FIAT_EU account"
+    items = fake_client.list_items
+    assert message not in caplog.text
+
+    # Logged once while the list stays empty
+    fake_client.list_items = []
+    for _ in range(2):
+        await coordinator.async_refresh()
+    assert caplog.text.count(message) == 1
+
+    # Not logged for a failed refresh, which keeps the cached vehicles
+    fake_client.list_items = items
+    await coordinator.async_refresh()
+    caplog.clear()
+
+    fake_client.refresh.side_effect = UconnectConnectionError("timeout")
+    await coordinator.async_refresh()
+    assert message not in caplog.text
+
+    # Logged again when the vehicles disappear after having been found
+    fake_client.refresh.side_effect = fake_client._refresh
+    fake_client.list_items = []
+    await coordinator.async_refresh()
+    assert caplog.text.count(message) == 1
