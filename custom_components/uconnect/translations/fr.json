@@ -15,7 +15,10 @@
             },
             "reauth_confirm": {
                 "title": "Nouvelle authentification à l'API",
-                "description": "Votre compte n'arrive pas à s'authentifier. Cliquez sur Valider pour vous authentifier à nouveau."
+                "description": "La connexion au compte {brand} {username} a échoué. Saisissez son mot de passe pour vous authentifier à nouveau. Pour utiliser un autre compte ou une autre marque, supprimez cette entrée et ajoutez-en une nouvelle.",
+                "data": {
+                    "password": "Mot de passe"
+                }
             }
         },
         "abort": {

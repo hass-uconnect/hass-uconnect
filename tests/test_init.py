@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import CONF_USERNAME, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from py_uconnect import AuthenticationError, UconnectConnectionError
+import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.uconnect.const import DOMAIN
+from custom_components.uconnect.const import CONF_BRAND_REGION, DOMAIN
 
 from .conftest import EV_VIN, ICE_VIN, FakeClient
 
@@ -288,3 +291,55 @@ async def test_two_entries(
     assert await hass.config_entries.async_unload(other.entry_id)
     await hass.async_block_till_done()
     assert hass.services.has_service(DOMAIN, "update")
+
+
+async def test_no_warning_for_unchanged_entry(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    fake_client: FakeClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert "re-authentication" not in caplog.text
+
+    await hass.config_entries.async_unload(config_entry.entry_id)
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        (
+            {CONF_BRAND_REGION: 5},
+            "This Uconnect entry was set up for FIAT_EU but logs in with JEEP_EU",
+        ),
+        (
+            {CONF_USERNAME: "other@example.com"},
+            "This FIAT_EU Uconnect entry logs in with another username",
+        ),
+    ],
+)
+async def test_warning_for_entry_changed_by_reauth(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    fake_client: FakeClient,
+    caplog: pytest.LogCaptureFixture,
+    changes: dict[str, Any],
+    message: str,
+) -> None:
+    """Earlier versions let a re-authentication change the brand or username"""
+
+    hass.config_entries.async_update_entry(
+        config_entry, data={**config_entry.data, **changes}
+    )
+
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    (warning,) = [r for r in caplog.records if "re-authentication" in r.getMessage()]
+    assert message in warning.getMessage()
+    # Nor the username, an email address
+    assert "@" not in warning.getMessage()
+
+    await hass.config_entries.async_unload(config_entry.entry_id)
