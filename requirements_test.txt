@@ -1,4 +1,4 @@
 pytest-homeassistant-custom-component==0.13.373
 py-uconnect==1.0.3
-py-stellantis-ssdp==0.3.1
+py-stellantis-ssdp==0.3.2
 ruff==0.17.1

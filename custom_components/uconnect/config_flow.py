@@ -48,6 +48,7 @@ from .const import (
     SSDP_BRANDS,
     is_ssdp_brand,
 )
+from .ssdp.coordinator import async_create_login_session
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -152,16 +153,20 @@ async def async_try_login(hass: HomeAssistant, data: dict[str, Any]) -> dict[str
 
 
 async def async_try_ssdp_login(
-    data: dict[str, Any],
+    hass: HomeAssistant, data: dict[str, Any]
 ) -> tuple[dict[str, str], Token | None]:
     """Log in to an SSDP brand with the entry data, return the form errors and
     the account token"""
 
+    session = async_create_login_session(
+        hass, not data.get(CONF_DISABLE_TLS_VERIFICATION), auto_cleanup=False
+    )
     try:
         token = await password_login(
             SSDP_BRANDS[data[CONF_BRAND_REGION]],
             data[CONF_USERNAME],
             data[CONF_PASSWORD],
+            session=session,
         )
     except stellantis_ssdp.AuthenticationError as err:
         _LOGGER.warning("Authentication failed: %s", err)
@@ -172,6 +177,8 @@ async def async_try_ssdp_login(
     except Exception:
         _LOGGER.exception("Unexpected exception")
         return {"base": "unknown"}, None
+    finally:
+        session.detach()
 
     return {}, token
 
@@ -314,16 +321,18 @@ class UconnectOptionFlowHandler(config_entries.OptionsFlow):
 
         if user_input is not None:
             if not (errors := await async_ssdp_enroll(client, user_input)):
-                # The command entities are added by the reload that the
-                # coordinator schedules when it sees the change
-                return self.async_create_entry(
-                    title=entry.title,
-                    data={
-                        **entry.options,
-                        CONF_PIN: user_input[CONF_PIN].strip(),
-                        CONF_ADD_COMMAND_ENTITIES: True,
-                    },
-                )
+                options = {
+                    **entry.options,
+                    CONF_PIN: user_input[CONF_PIN].strip(),
+                    CONF_ADD_COMMAND_ENTITIES: True,
+                }
+                # The setup is saved now. The entry is reloaded to add the
+                # command entities: by the coordinator when the options
+                # change, here when they stay the same (the listener then
+                # does not run)
+                if options == dict(entry.options):
+                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
+                return self.async_create_entry(title=entry.title, data=options)
             pin = user_input[CONF_PIN]
 
         return self.async_show_form(
@@ -377,7 +386,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _async_ssdp_user(self, user_input: dict[str, Any]) -> ConfigFlowResult:
         """Log in to an SSDP brand, then offer to set up remote commands"""
 
-        errors, token = await async_try_ssdp_login(user_input)
+        errors, token = await async_try_ssdp_login(self.hass, user_input)
         if errors or token is None:
             return self.async_show_form(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
@@ -489,7 +498,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {**entry.data, CONF_PASSWORD: user_input[CONF_PASSWORD]}
             if is_ssdp_brand(entry.data[CONF_BRAND_REGION]):
-                errors, token = await async_try_ssdp_login(data)
+                errors, token = await async_try_ssdp_login(self.hass, data)
                 if not errors and token is not None:
                     data[CONF_SSDP_STATE] = ssdp_state_with_token(
                         entry.data.get(CONF_SSDP_STATE), token

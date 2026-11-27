@@ -7,6 +7,7 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING
 
+import aiohttp
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
@@ -48,6 +49,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @callback
+def async_create_login_session(
+    hass: HomeAssistant, verify_ssl: bool, auto_cleanup: bool = True
+) -> aiohttp.ClientSession:
+    """A session for the email and password logins: without a cookie jar, the
+    login keeps its own cookies"""
+
+    return async_create_clientsession(
+        hass,
+        verify_ssl=verify_ssl,
+        auto_cleanup=auto_cleanup,
+        cookie_jar=aiohttp.DummyCookieJar(),
+    )
+
+
+@callback
 def async_get_all_coordinators(
     hass: HomeAssistant,
 ) -> list[UconnectDataUpdateCoordinator | SsdpDataUpdateCoordinator]:
@@ -76,18 +92,22 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         self.vehicles: dict[str, Vehicle] = {}
         self._skipped: set[str] = set()
         self._warned_no_vehicles = False
+        # The vehicles the platforms were set up with, known after the first
+        # refresh
+        self._platform_vins: frozenset[str] | None = None
+        self._reload_scheduled = False
 
         data = config_entry.data
+        verify_ssl = not data.get(CONF_DISABLE_TLS_VERIFICATION)
         self.client = Client(
             SSDP_BRANDS[data[CONF_BRAND_REGION]],
             State.from_dict(data[CONF_SSDP_STATE]),
             pin=UconnectDataUpdateCoordinator._read_pin(config_entry),
-            session=async_create_clientsession(
-                hass, verify_ssl=not data.get(CONF_DISABLE_TLS_VERIFICATION)
-            ),
+            session=async_create_clientsession(hass, verify_ssl=verify_ssl),
             on_state_change=self._save_state,
             email=data[CONF_USERNAME],
             password=data[CONF_PASSWORD],
+            login_session=async_create_login_session(hass, verify_ssl),
         )
 
         super().__init__(
@@ -99,15 +119,27 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
             always_update=True,
         )
 
-        # Whether the platforms add the command entities, they are added by a
-        # reload when this changes
-        self.command_entities = self._command_entities_enabled(config_entry)
+        # The options seen last, to tell them from data-only updates
+        self._options = dict(config_entry.options)
+        # What the platforms create depends on these, the entry is reloaded
+        # when they change
+        self._entity_options = self._read_entity_options(config_entry)
 
-    def _command_entities_enabled(self, config_entry: UconnectConfigEntry) -> bool:
-        return (
-            bool(config_entry.options.get(CONF_ADD_COMMAND_ENTITIES))
-            and self.client.enrolled
-        )
+    def _read_entity_options(
+        self, config_entry: UconnectConfigEntry
+    ) -> tuple[bool, bool]:
+        """Whether the command entities option is on (the Update button), and
+        whether the remote-command entities are added: the option is on and
+        remote commands are set up"""
+
+        option = bool(config_entry.options.get(CONF_ADD_COMMAND_ENTITIES))
+        return option, option and self.client.enrolled
+
+    @property
+    def command_entities(self) -> bool:
+        """Whether the platforms add the entities of the remote commands"""
+
+        return self._entity_options[1]
 
     @staticmethod
     def _read_scan_interval(config_entry: UconnectConfigEntry) -> timedelta:
@@ -160,25 +192,30 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         One Stellantis account may list the vehicles of several brands, and a
         VIN could also be in a Uconnect account: two entries providing the
         same vehicle would create the same device and entity IDs. A vehicle
-        stays with the Uconnect entry, or with the SSDP entry that shows it
-        already or has the smallest entry ID.
+        goes to the Uconnect entry, else to the SSDP entry that shows it
+        already.
+
+        The platforms only add the entities of the vehicles shown at setup, so
+        the entry is reloaded when a vehicle of the account is taken over from
+        another entry or handed over to one. The Uconnect entries taking over
+        a vehicle are reloaded too: they could not add its entities while this
+        entry had them.
         """
 
-        own_id = self.config_entry.entry_id
+        uconnect: dict[str, str] = {}
         taken: set[str] = set()
         for other in async_get_all_coordinators(self.hass):
             if other is self:
                 continue
             if isinstance(other, UconnectDataUpdateCoordinator):
-                taken.update(other.client.vehicles)
+                for vin in other.client.vehicles:
+                    uconnect.setdefault(vin, other.config_entry.entry_id)
             else:
                 taken.update(other.vehicles)
-                if other.config_entry.entry_id < own_id:
-                    taken.update(other.client.vehicles)
 
         vehicles: dict[str, Vehicle] = {}
         for vin, vehicle in self.client.vehicles.items():
-            if vin in taken and vin not in self.vehicles:
+            if vin in uconnect or vin in taken:
                 if vin not in self._skipped:
                     self._skipped.add(vin)
                     _LOGGER.warning(
@@ -191,6 +228,38 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
             vehicles[vin] = vehicle
 
         self.vehicles = vehicles
+
+        vins = frozenset(vehicles)
+        if self._platform_vins is None:
+            # The platforms are set up with these
+            self._platform_vins = vins
+            return
+
+        gained = vins - self._platform_vins
+        lost = {v for v in self._platform_vins - vins if v in self.client.vehicles}
+        if gained or lost:
+            self._schedule_reload({uconnect[v] for v in lost if v in uconnect})
+
+    def _schedule_reload(self, then: set[str] | None = None) -> None:
+        """Reload this entry, then the entries ``then``, once the current
+        update is done"""
+
+        if self._reload_scheduled:
+            return
+        self._reload_scheduled = True
+
+        hass = self.hass
+        entry_id = self.config_entry.entry_id
+        others = sorted(then or ())
+
+        async def reload() -> None:
+            await hass.config_entries.async_reload(entry_id)
+            for other in others:
+                await hass.config_entries.async_reload(other)
+
+        hass.async_create_task(
+            reload(), f"{DOMAIN} reload {entry_id}", eager_start=False
+        )
 
     def _warn_if_no_vehicles(self) -> None:
         if self.client.vehicles:
@@ -235,12 +304,21 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
     async def update_options(
         self, hass: HomeAssistant, config_entry: UconnectConfigEntry
     ) -> None:
-        """Apply changed options"""
+        """Apply changed options.
+
+        The listener also runs when only the data changes: the tokens and the
+        soft token are saved there, also while remote commands are being set
+        up. Those updates are ignored.
+        """
+
+        options = dict(config_entry.options)
+        if options == self._options:
+            return
+        self._options = options
 
         self.update_interval = self._read_scan_interval(config_entry)
         self.client.set_pin(UconnectDataUpdateCoordinator._read_pin(config_entry))
 
-        # Remote commands were set up, or the command entities option changed
-        if self._command_entities_enabled(config_entry) != self.command_entities:
-            self.command_entities = not self.command_entities
-            hass.config_entries.async_schedule_reload(config_entry.entry_id)
+        # The command entities option changed, or remote commands were set up
+        if self._read_entity_options(config_entry) != self._entity_options:
+            self._schedule_reload()

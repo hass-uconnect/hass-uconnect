@@ -365,8 +365,11 @@ def _resolve_target(
 
     device_id = call.data.get(ATTR_DEVICE_ID)
     if device_id is None:
-        if len(coordinators) == 1 and len(_vehicles(coordinators[0])) == 1:
-            return coordinators[0], next(iter(_vehicles(coordinators[0])))
+        # Entries can have no vehicles: those of an account shared by two
+        # SSDP entries are only provided by one of them
+        targets = [(c, vin) for c in coordinators for vin in _vehicles(c)]
+        if len(targets) == 1:
+            return targets[0]
         raise ServiceValidationError("A vehicle must be selected")
 
     device = dr.async_get(hass).async_get(device_id)

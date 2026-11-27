@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.const import CONF_PASSWORD, CONF_PIN, Platform
@@ -992,4 +993,266 @@ async def test_actions_with_uconnect_entry(
         await hass.services.async_call(DOMAIN, "horn", {}, blocking=True)
 
     for entry in (config_entry, ssdp_config_entry):
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+# --- Review fixes ------------------------------------------------------------------------
+
+
+async def setup_entry(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_data_updates_do_not_reload(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    """Saving the state, also while remote commands are being set up, does not
+    reload the entry"""
+
+    entry = make_ssdp_entry(enrolled=False)
+    await setup_entry(hass, entry)
+    client = ssdp_client.last
+
+    # The soft token is activated, the setup is not finished yet
+    client.state.soft_token = make_ssdp_state().soft_token
+    client.kwargs["on_state_change"](client.state)
+    await hass.async_block_till_done()
+
+    assert len(ssdp_client.instances) == 1
+    assert entry.state is ConfigEntryState.LOADED
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_options_set_up_remote_commands_unchanged_options(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    """With the options already as the setup leaves them, the entry is
+    reloaded once, after the final state is saved"""
+
+    entry = make_ssdp_entry(enrolled=False)
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_PIN: "1234"}
+    )
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    client = ssdp_client.last
+
+    async def enroll_finish(code: str, pin: str) -> None:
+        save = client.kwargs["on_state_change"]
+        # Like the library: the soft token is saved after its activation...
+        client.state.soft_token = make_ssdp_state().soft_token
+        save(client.state)
+        await asyncio.sleep(0)
+        # ...and again after the one-time password rotated its key
+        client.state.soft_token.k1 = "9" * 32
+        client.state.remote_token = make_ssdp_token("RCZ-FINAL")
+        save(client.state)
+
+    client.enroll_finish.side_effect = enroll_finish
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "ssdp_send_sms"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"sms_code": "123456", "pin": "1234"}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    # Reloaded once, with the final state
+    assert len(ssdp_client.instances) == 2
+    reloaded = ssdp_client.last.state
+    assert reloaded.soft_token is not None
+    assert reloaded.soft_token.k1 == "9" * 32
+    assert reloaded.remote_token is not None
+    assert reloaded.remote_token.access_token == "RCZ-FINAL"
+    assert Platform.LOCK in registered(hass, entry)
+
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_update_button_follows_option_without_remote_commands(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    entry = make_ssdp_entry(enrolled=False, command_entities=False)
+    await setup_entry(hass, entry)
+
+    async def set_option(value: bool) -> None:
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], {"next_step_id": "ssdp_settings"}
+        )
+        await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {"scan_interval": 5, "pin": "", CONF_ADD_COMMAND_ENTITIES: value},
+        )
+        await hass.async_block_till_done()
+
+    await set_option(True)
+    assert len(ssdp_client.instances) == 2
+    button = hass.states.get(entity_id(hass, "button", "update"))
+    assert button is not None and button.state != "unavailable"
+
+    await set_option(False)
+    assert len(ssdp_client.instances) == 3
+    button = hass.states.get(entity_id(hass, "button", "update"))
+    assert button is None or button.state == "unavailable"
+
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_login_follows_tls_option(hass: HomeAssistant, login: AsyncMock) -> None:
+    session = MagicMock()
+    create = MagicMock(return_value=session)
+
+    with patch(
+        "custom_components.uconnect.config_flow.async_create_login_session", create
+    ):
+        await start_flow(hass, {**USER_INPUT, "disable_tls_verification": True})
+
+    create.assert_called_once_with(hass, False, auto_cleanup=False)
+    assert login.call_args.kwargs["session"] is session
+    session.detach.assert_called_once()
+
+
+async def test_client_login_session_follows_tls_option(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    entry = make_ssdp_entry()
+    entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, "disable_tls_verification": True}
+    )
+    create = MagicMock(return_value=MagicMock())
+
+    with patch(
+        "custom_components.uconnect.ssdp.coordinator.async_create_login_session",
+        create,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    create.assert_called_once_with(hass, False)
+    assert ssdp_client.last.kwargs["login_session"] is create.return_value
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_action_without_device_two_entries_one_vehicle(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    first = make_ssdp_entry(brand=21)
+    second = make_ssdp_entry(brand=22)
+    for entry in (first, second):
+        await setup_entry(hass, entry)
+
+    await hass.services.async_call(DOMAIN, "horn", {}, blocking=True)
+
+    owner = next(e for e in (first, second) if e.runtime_data.vehicles)
+    owner.runtime_data.client.command_verify.assert_awaited_once_with(
+        SSDP_VIN, remote.horn()
+    )
+
+    for entry in (first, second):
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_owner_reload_keeps_vehicle(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    low, high = sorted(
+        (make_ssdp_entry(brand=21), make_ssdp_entry(brand=22)),
+        key=lambda e: e.entry_id,
+    )
+    for entry in (high, low):
+        await setup_entry(hass, entry)
+    assert high.runtime_data.vehicles.keys() == {SSDP_VIN}
+
+    # Reloading the entry with the larger ID keeps the vehicle with it
+    assert await hass.config_entries.async_reload(high.entry_id)
+    await hass.async_block_till_done()
+    await low.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert high.runtime_data.vehicles.keys() == {SSDP_VIN}
+    assert low.runtime_data.vehicles == {}
+    assert registered(hass, high)[Platform.SENSOR] == SENSORS
+
+    for entry in (low, high):
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_vehicle_handed_over_when_owner_unloaded(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    first = make_ssdp_entry(brand=21)
+    second = make_ssdp_entry(brand=22)
+    for entry in (first, second):
+        await setup_entry(hass, entry)
+    assert second.runtime_data.vehicles == {}
+
+    await hass.config_entries.async_unload(first.entry_id)
+    await hass.async_block_till_done()
+    await second.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    # The second entry was reloaded and provides the vehicle with its entities
+    assert second.state is ConfigEntryState.LOADED
+    assert second.runtime_data.vehicles.keys() == {SSDP_VIN}
+    assert registered(hass, second)[Platform.SENSOR] == SENSORS
+    assert state(hass, "sensor", "state_of_charge").state == "49"
+
+    await hass.config_entries.async_unload(second.entry_id)
+
+
+async def test_uconnect_entry_takes_over_vehicle(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    fake_client: FakeClient,
+    ssdp_client: FakeSsdpClientFactory,
+) -> None:
+    """A vehicle also in a Uconnect account goes to the Uconnect entry, also
+    when the SSDP entry provided it first"""
+
+    ssdp_client.list_items = [{**ssdp_client.list_items[0], "vin": EV_VIN}]
+    ssdp_client.telemetry = {EV_VIN: ssdp_client.telemetry[SSDP_VIN]}
+    # The Uconnect entry is added after the SSDP one
+    await hass.config_entries.async_remove(config_entry.entry_id)
+
+    ssdp_entry = make_ssdp_entry()
+    await setup_entry(hass, ssdp_entry)
+    assert ssdp_entry.runtime_data.vehicles.keys() == {EV_VIN}
+
+    uconnect_entry = MockConfigEntry(
+        domain=DOMAIN,
+        title=config_entry.title,
+        unique_id=config_entry.unique_id,
+        data=dict(config_entry.data),
+        options=dict(config_entry.options),
+    )
+    await setup_entry(hass, uconnect_entry)
+
+    await ssdp_entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    # The SSDP entry gave the vehicle up, the Uconnect entry was reloaded and
+    # has its entities
+    assert ssdp_entry.runtime_data.vehicles == {}
+    reg = er.async_get(hass)
+    owners = {
+        e.config_entry_id
+        for e in reg.entities.values()
+        if e.unique_id.startswith(f"{DOMAIN}_{EV_VIN}_")
+        and hass.states.get(e.entity_id) is not None
+        and hass.states.get(e.entity_id).state != "unavailable"
+    }
+    assert owners == {uconnect_entry.entry_id}
+    odometer = reg.async_get_entity_id("sensor", DOMAIN, f"{DOMAIN}_{EV_VIN}_odometer")
+    assert odometer is not None
+    assert reg.async_get(odometer).config_entry_id == uconnect_entry.entry_id
+
+    for entry in (ssdp_entry, uconnect_entry):
         await hass.config_entries.async_unload(entry.entry_id)
