@@ -11,6 +11,8 @@ from py_uconnect import Vehicle
 from .const import DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
 from .entity import UconnectEntity, should_add
+from .ssdp import device_tracker as ssdp_device_tracker
+from .ssdp.coordinator import SsdpDataUpdateCoordinator
 
 
 async def async_setup_entry(
@@ -18,6 +20,12 @@ async def async_setup_entry(
     config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    if isinstance(config_entry.runtime_data, SsdpDataUpdateCoordinator):
+        await ssdp_device_tracker.async_setup_entry(
+            hass, config_entry, async_add_entities
+        )
+        return
+
     coordinator = config_entry.runtime_data
     entities = []
     for vehicle in coordinator.client.vehicles.values():

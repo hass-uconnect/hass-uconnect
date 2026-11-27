@@ -35,6 +35,8 @@ from py_uconnect.command import (
 from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
 from .entity import UconnectEntity, should_add
+from .ssdp import switch as ssdp_switch
+from .ssdp.coordinator import SsdpDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -113,6 +115,10 @@ async def async_setup_entry(
     config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    if isinstance(config_entry.runtime_data, SsdpDataUpdateCoordinator):
+        await ssdp_switch.async_setup_entry(hass, config_entry, async_add_entities)
+        return
+
     # Do not add entities if not configured
     if not config_entry.options.get(CONF_ADD_COMMAND_ENTITIES):
         return

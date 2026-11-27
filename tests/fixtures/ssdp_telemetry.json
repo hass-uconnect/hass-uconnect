@@ -1,0 +1,195 @@
+{
+  "createdAt": "2026-11-26T21:16:59.828Z",
+  "updatedAt": "2026-11-26T21:16:59.828Z",
+  "vehicle": {
+    "ignition": {
+      "createdAt": "2026-11-26T21:16:59.828Z",
+      "type": "Stop"
+    },
+    "location": {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.1214,
+          52.0907
+        ]
+      },
+      "properties": {
+        "type": "Acquire",
+        "fixStatus": "3D"
+      }
+    },
+    "preconditioning": {
+      "createdAt": "2026-11-26T19:09:38.855Z",
+      "airConditioning": {
+        "status": "Disabled",
+        "programs": [
+          {
+            "start": "PT7H15M",
+            "occurrence": {
+              "day": [
+                "Mon",
+                "Tue",
+                "Thu"
+              ]
+            },
+            "enabled": true,
+            "slot": 1
+          },
+          {
+            "start": "PT8H15M",
+            "occurrence": {
+              "day": [
+                "Wed",
+                "Fri"
+              ]
+            },
+            "enabled": true,
+            "slot": 2
+          }
+        ]
+      }
+    },
+    "energies": [
+      {
+        "createdAt": "2026-11-26T21:16:59.828Z",
+        "type": "Electric",
+        "subType": "ElectricEnergy",
+        "level": 49.0,
+        "autonomy": 22,
+        "extension": {
+          "electric": {
+            "battery": {
+              "load": {
+                "createdAt": "2026-11-26T19:10:27.585Z",
+                "residual": 9500
+              },
+              "health": {
+                "createdAt": "2026-11-26T19:10:27.585Z",
+                "capacity": 99,
+                "resistance": 100
+              },
+              "temperature": {
+                "createdAt": "2026-11-26T19:10:27.585Z",
+                "average": 14
+              }
+            },
+            "charging": {
+              "plugged": true,
+              "status": "InProgress",
+              "chargingMode": "No",
+              "settings": {
+                "chargingMode": "No"
+              }
+            }
+          }
+        }
+      },
+      {
+        "createdAt": "2026-11-26T19:10:27.585Z",
+        "type": "Fuel",
+        "subType": "FossilEnergy",
+        "level": 48.0,
+        "autonomy": 432
+      }
+    ],
+    "doorsState": {
+      "createdAt": "2026-11-26T21:16:58.500Z",
+      "lockedState": [
+        "Locked",
+        "RearDoorsLocked"
+      ],
+      "opening": [
+        {
+          "state": "Closed",
+          "identifier": "Driver"
+        },
+        {
+          "state": "Closed",
+          "identifier": "RearRight"
+        },
+        {
+          "state": "Closed",
+          "identifier": "RearLeft"
+        },
+        {
+          "state": "Closed",
+          "identifier": "Passenger"
+        },
+        {
+          "state": "Closed",
+          "identifier": "HoodDoor"
+        },
+        {
+          "state": "Closed",
+          "identifier": "RearWindow"
+        }
+      ]
+    },
+    "battery": {
+      "createdAt": "2026-11-26T19:09:36.346Z",
+      "voltage": 93.0,
+      "residual": 13.83
+    },
+    "odometer": {
+      "createdAt": "2026-11-26T19:09:36.346Z",
+      "mileage": 997.2
+    },
+    "kinetic": {
+      "createdAt": "2026-11-26T19:09:35.814Z",
+      "acceleration": 0.0,
+      "speed": 0.0,
+      "moving": false
+    },
+    "wipingBlades": {
+      "createdAt": "2026-11-26T19:09:36.346Z",
+      "active": false
+    },
+    "maintenance": {
+      "createdAt": "2026-11-26T19:09:36.346Z",
+      "daysBeforeMaintenance": 343,
+      "mileageBeforeMaintenance": 24000
+    },
+    "powerTrain": {
+      "createdAt": "2026-11-26T21:16:58.500Z",
+      "gmpStatus": "NotRunning"
+    },
+    "tyreState": {
+      "createdAt": "2026-11-26T19:09:36.346Z",
+      "states": [
+        {
+          "id": "FrontLeft",
+          "status": "Normal"
+        },
+        {
+          "id": "FrontRight",
+          "status": "Normal"
+        },
+        {
+          "id": "RearLeft",
+          "status": "Normal"
+        },
+        {
+          "id": "RearRight",
+          "status": "Normal"
+        }
+      ]
+    }
+  },
+  "privacy": {
+    "createdAt": "2026-11-26T21:16:59.828Z",
+    "state": "None"
+  },
+  "environment": {
+    "luminosity": {
+      "createdAt": "2026-11-26T19:09:36.346Z",
+      "day": true
+    }
+  },
+  "_links": {
+    "self": {
+      "href": "https://apic-token-eu.ssdp.stellantis.com/iov-prod/extra/apim-customer/apim-b2c/v1/accounts/vehicles/ZACNJDE00SPA00001/telemetries/latest"
+    }
+  }
+}

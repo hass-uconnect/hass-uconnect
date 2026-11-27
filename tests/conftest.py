@@ -7,8 +7,10 @@ same data as with the real client.
 
 from __future__ import annotations
 
+import base64
 from collections.abc import AsyncIterator, Iterator
 import copy
+from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
 from typing import Any
@@ -30,13 +32,20 @@ from py_uconnect.models import (
 )
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from stellantis_ssdp import SoftTokenState, State, Token, Vehicle as SsdpVehicle
+from stellantis_ssdp.models import (
+    apply_list_item as apply_ssdp_list_item,
+    apply_telemetry,
+)
 
 from custom_components.uconnect.config_flow import entry_unique_id
 from custom_components.uconnect.const import (
+    BRANDS,
     CONF_ADD_COMMAND_ENTITIES,
     CONF_BRAND_REGION,
     CONF_CHARGING_REFRESH_INTERVAL,
     CONF_DISABLE_TLS_VERIFICATION,
+    CONF_SSDP_STATE,
     DOMAIN,
 )
 
@@ -214,4 +223,168 @@ async def setup_integration(
     yield config_entry
 
     await hass.config_entries.async_unload(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+
+# --- SSDP brands ---------------------------------------------------------------
+
+SSDP_VIN = "ZACNJDE00SPA00001"
+SSDP_USER_ID = "ssdp-user-1"
+SSDP_BRAND = 21
+
+
+def make_jwt(claims: dict[str, Any]) -> str:
+    def enc(d: dict[str, Any]) -> str:
+        return base64.urlsafe_b64encode(json.dumps(d).encode()).decode().rstrip("=")
+
+    return f"{enc({'alg': 'none'})}.{enc(claims)}.sig"
+
+
+def make_ssdp_token(access: str = "ACCESS", sub: str = SSDP_USER_ID) -> Token:
+    return Token(
+        access_token=access,
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
+        refresh_token="REFRESH",
+        id_token=make_jwt({"sub": sub}),
+    )
+
+
+def enrolled_soft_token() -> SoftTokenState:
+    return SoftTokenState(
+        device_id="dev",
+        alea="00" * 16,
+        id="IW-ID",
+        k1="1" * 32,
+        services=["svc"],
+        secrets={"svc": "2" * 32},
+    )
+
+
+def make_ssdp_state(enrolled: bool = True) -> State:
+    return State(
+        token=make_ssdp_token(),
+        soft_token=enrolled_soft_token() if enrolled else None,
+    )
+
+
+class FakeSsdpClient:
+    """A stellantis_ssdp.Client built by FakeSsdpClientFactory"""
+
+    def __init__(
+        self, factory: FakeSsdpClientFactory, args: tuple[Any, ...], kwargs: Any
+    ) -> None:
+        self.factory = factory
+        self.brand, self.state = args
+        self.kwargs = kwargs
+        self.vehicles: dict[str, SsdpVehicle] = {}
+        self.refresh = AsyncMock(side_effect=self._refresh)
+        self.command_verify = AsyncMock(return_value="RA1")
+        self.enroll_start = AsyncMock()
+        self.enroll_finish = AsyncMock(side_effect=self._enroll_finish)
+        self.set_pin = MagicMock()
+
+    @property
+    def enrolled(self) -> bool:
+        return self.state.enrolled
+
+    async def _refresh(self) -> dict[str, SsdpVehicle]:
+        items = self.factory.list_items
+        for item in items:
+            vehicle = self.vehicles.get(item["vin"]) or SsdpVehicle(vin=item["vin"])
+            apply_ssdp_list_item(vehicle, item)
+            if (telemetry := self.factory.telemetry.get(item["vin"])) is not None:
+                apply_telemetry(vehicle, copy.deepcopy(telemetry))
+            self.vehicles[item["vin"]] = vehicle
+
+        vins = {item["vin"] for item in items}
+        for vin in list(self.vehicles):
+            if vin not in vins:
+                del self.vehicles[vin]
+
+        return self.vehicles
+
+    async def _enroll_finish(self, code: str, pin: str) -> None:
+        self.state.soft_token = enrolled_soft_token()
+        self.state.remote_token = make_ssdp_token("RCZ")
+        if callback := self.kwargs.get("on_state_change"):
+            callback(self.state)
+
+
+class FakeSsdpClientFactory:
+    """Replaces stellantis_ssdp.Client: every entry gets its own client, all
+    of them return the vehicles of list_items/telemetry"""
+
+    def __init__(self) -> None:
+        self.list_items: list[dict[str, Any]] = load_fixture("ssdp_vehicles.json")[
+            "_embedded"
+        ]["vehicles"]
+        self.telemetry: dict[str, dict[str, Any]] = {
+            SSDP_VIN: load_fixture("ssdp_telemetry.json")
+        }
+        self.instances: list[FakeSsdpClient] = []
+
+    def __call__(self, *args: Any, **kwargs: Any) -> FakeSsdpClient:
+        client = FakeSsdpClient(self, args, kwargs)
+        self.instances.append(client)
+        return client
+
+    @property
+    def last(self) -> FakeSsdpClient:
+        return self.instances[-1]
+
+
+@pytest.fixture
+def ssdp_client() -> Iterator[FakeSsdpClientFactory]:
+    factory = FakeSsdpClientFactory()
+    with patch("custom_components.uconnect.ssdp.coordinator.Client", factory):
+        yield factory
+
+
+def make_ssdp_entry(
+    brand: int = SSDP_BRAND,
+    enrolled: bool = True,
+    command_entities: bool = True,
+    username: str = "user@example.com",
+) -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title=f"{BRANDS[brand]} {username}",
+        unique_id=entry_unique_id(brand, username),
+        data={
+            CONF_USERNAME: username,
+            CONF_PASSWORD: "secret",
+            CONF_BRAND_REGION: brand,
+            CONF_PIN: "1234",
+            CONF_DISABLE_TLS_VERIFICATION: False,
+            CONF_SSDP_STATE: make_ssdp_state(enrolled).to_dict(),
+        },
+        options={
+            CONF_SCAN_INTERVAL: 5,
+            CONF_PIN: "",
+            CONF_ADD_COMMAND_ENTITIES: command_entities,
+        },
+    )
+
+
+@pytest.fixture
+def ssdp_config_entry(hass: HomeAssistant) -> MockConfigEntry:
+    entry = make_ssdp_entry()
+    entry.add_to_hass(hass)
+    return entry
+
+
+@pytest.fixture
+async def setup_ssdp_integration(
+    hass: HomeAssistant,
+    ssdp_config_entry: MockConfigEntry,
+    ssdp_client: FakeSsdpClientFactory,
+) -> AsyncIterator[MockConfigEntry]:
+    """Set up an entry of an SSDP brand and unload it after the test"""
+
+    assert await hass.config_entries.async_setup(ssdp_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    yield ssdp_config_entry
+
+    await hass.config_entries.async_unload(ssdp_config_entry.entry_id)
     await hass.async_block_till_done()

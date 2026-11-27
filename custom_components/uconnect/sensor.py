@@ -32,6 +32,8 @@ from .extrapolated_soc import (
     UconnectChargingRateSensor,
     UconnectExtrapolatedSocSensor,
 )
+from .ssdp import sensor as ssdp_sensor
+from .ssdp.coordinator import SsdpDataUpdateCoordinator
 
 # Units reported by the API that differ from the Home Assistant ones
 UNIT_ALIASES: Final[dict[str, str]] = {
@@ -265,6 +267,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sensor platform."""
+    if isinstance(config_entry.runtime_data, SsdpDataUpdateCoordinator):
+        await ssdp_sensor.async_setup_entry(hass, config_entry, async_add_entities)
+        return
 
     coordinator = config_entry.runtime_data
     entities: list[SensorEntity] = []

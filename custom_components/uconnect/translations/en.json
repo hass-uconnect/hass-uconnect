@@ -19,6 +19,26 @@
                 "data": {
                     "password": "Password"
                 }
+            },
+            "ssdp_remote": {
+                "title": "Remote commands",
+                "description": "Logged in. Remote commands (doors, climate, horn…) need a one-time setup: an SMS with a code is sent to the phone number of the account, then you enter the code and the PIN of the brand's app. This can also be done later in the integration options.",
+                "menu_options": {
+                    "ssdp_send_sms": "Set up remote commands now (sends an SMS)",
+                    "ssdp_finish": "Finish without remote commands"
+                }
+            },
+            "ssdp_send_sms": {
+                "title": "Remote commands",
+                "description": "The SMS could not be sent. Submit to try again."
+            },
+            "ssdp_enroll": {
+                "title": "Remote commands",
+                "description": "Enter the code of the SMS sent to the phone number of the account, and the PIN of the brand's app.",
+                "data": {
+                    "sms_code": "SMS code",
+                    "pin": "PIN"
+                }
             }
         },
         "abort": {
@@ -28,7 +48,8 @@
         "error": {
             "invalid_auth": "The login failed to the Uconnect servers. Double check your vehicle doesn't use SiriusXM Guardian and your credentials are correct.",
             "cannot_connect": "Unable to connect to the Uconnect servers. Try again later.",
-            "unknown": "Unexpected error"
+            "unknown": "Unexpected error",
+            "invalid_code": "The SMS code or the PIN was rejected."
         }
     },
     "options": {
@@ -41,7 +62,42 @@
                     "charging_refresh_interval": "Deep Refresh While Charging (min, 0 disables, 15 minimum)",
                     "add_command_entities": "Add command entities (Button/Lock/Switch)"
                 }
+            },
+            "ssdp_menu": {
+                "title": "Options",
+                "menu_options": {
+                    "ssdp_settings": "Settings",
+                    "ssdp_send_sms": "Set up remote commands (sends an SMS)"
+                }
+            },
+            "ssdp_settings": {
+                "title": "Settings",
+                "data": {
+                    "scan_interval": "Scan Interval (min)",
+                    "pin": "Pin",
+                    "add_command_entities": "Add command entities (Button/Lock/Switch)"
+                }
+            },
+            "ssdp_send_sms": {
+                "title": "Remote commands",
+                "description": "The SMS could not be sent. Submit to try again."
+            },
+            "ssdp_enroll": {
+                "title": "Remote commands",
+                "description": "Enter the code of the SMS sent to the phone number of the account, and the PIN of the brand's app.",
+                "data": {
+                    "sms_code": "SMS code",
+                    "pin": "PIN"
+                }
             }
+        },
+        "error": {
+            "invalid_code": "The SMS code or the PIN was rejected.",
+            "cannot_connect": "Unable to connect to the Uconnect servers. Try again later.",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "not_loaded": "The entry has to be loaded to set up remote commands."
         }
     },
     "entity": {
@@ -117,6 +173,36 @@
             },
             "svla": {
                 "name": "Stolen Vehicle Status"
+            },
+            "doors_locked": {
+                "name": "Doors"
+            },
+            "moving": {
+                "name": "Moving"
+            },
+            "door_driver_open": {
+                "name": "Door Driver Open"
+            },
+            "door_passenger_open": {
+                "name": "Door Passenger Open"
+            },
+            "door_rear_left_open": {
+                "name": "Door Rear Left Open"
+            },
+            "door_rear_right_open": {
+                "name": "Door Rear Right Open"
+            },
+            "trunk_open": {
+                "name": "Trunk Open"
+            },
+            "hood_open": {
+                "name": "Hood Open"
+            },
+            "rear_window_open": {
+                "name": "Rear Window Open"
+            },
+            "roof_window_open": {
+                "name": "Roof Window Open"
             }
         },
         "button": {
@@ -140,6 +226,9 @@
             },
             "reset_battery_learning": {
                 "name": "Reset Battery Learning"
+            },
+            "button_horn": {
+                "name": "Horn"
             }
         },
         "device_tracker": {
@@ -252,6 +341,18 @@
             },
             "charging_rate": {
                 "name": "Charging Rate"
+            },
+            "battery_12v_level": {
+                "name": "12V Battery Level"
+            },
+            "battery_health": {
+                "name": "HVBattery Health"
+            },
+            "battery_temperature": {
+                "name": "HVBattery Temperature"
+            },
+            "charging_status": {
+                "name": "Charging Status"
             }
         },
         "switch": {
@@ -373,6 +474,16 @@
         "lights": {
             "name": "Lights",
             "description": "Blink the lights",
+            "fields": {
+                "device_id": {
+                    "name": "Vehicle",
+                    "description": "Target vehicle"
+                }
+            }
+        },
+        "horn": {
+            "name": "Horn",
+            "description": "Sound the horn (vehicles of the 2.0 apps)",
             "fields": {
                 "device_id": {
                     "name": "Vehicle",

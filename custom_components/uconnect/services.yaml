@@ -82,6 +82,14 @@ lights:
         device:
           integration: uconnect
 
+horn:
+  fields:
+    device_id:
+      required: false
+      selector:
+        device:
+          integration: uconnect
+
 lights_horn:
   fields:
     device_id:

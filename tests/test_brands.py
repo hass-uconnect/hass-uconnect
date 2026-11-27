@@ -8,8 +8,9 @@ from homeassistant.config_entries import SOURCE_USER
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from py_uconnect.brands import BRANDS as BRANDS_BY_NAME
+import stellantis_ssdp
 
-from custom_components.uconnect.const import BRANDS, DOMAIN
+from custom_components.uconnect.const import BRANDS, DOMAIN, SSDP_BRANDS, is_ssdp_brand
 
 from .test_config_flow import USER_INPUT
 
@@ -43,8 +44,26 @@ def test_brand_numbers_are_stable() -> None:
 
 
 def test_brands_exist_in_the_library() -> None:
-    assert set(BRANDS.values()) <= set(BRANDS_BY_NAME)
+    uconnect = {n: name for n, name in BRANDS.items() if n not in SSDP_BRANDS}
+    assert set(uconnect.values()) <= set(BRANDS_BY_NAME)
     assert len(set(BRANDS.values())) == len(BRANDS)
+
+
+def test_ssdp_brands() -> None:
+    expected = {
+        21: ("JEEP_EU_SSDP", stellantis_ssdp.JEEP_EU),
+        22: ("PEUGEOT_EU_SSDP", stellantis_ssdp.PEUGEOT_EU),
+        23: ("CITROEN_EU_SSDP", stellantis_ssdp.CITROEN_EU),
+        24: ("OPEL_EU_SSDP", stellantis_ssdp.OPEL_EU),
+        25: ("VAUXHALL_EU_SSDP", stellantis_ssdp.VAUXHALL_EU),
+        26: ("LANCIA_EU_SSDP", stellantis_ssdp.LANCIA_EU),
+    }
+
+    assert {n: (BRANDS[n], SSDP_BRANDS[n]) for n in SSDP_BRANDS} == expected
+    assert all(is_ssdp_brand(n) for n in expected)
+    assert not any(is_ssdp_brand(n) for n in range(1, 21))
+    # No Uconnect brand name is reused
+    assert not set(BRANDS_BY_NAME) & {name for name, _ in expected.values()}
 
 
 def test_latam_brands() -> None:
