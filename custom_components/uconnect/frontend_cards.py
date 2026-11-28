@@ -253,6 +253,8 @@ def _build_vehicle_list(hass: HomeAssistant) -> list[dict[str, Any]]:
             ("door_passenger", "door_passenger_locked"),
             ("door_rear_left", "door_rear_left_locked"),
             ("door_rear_right", "door_rear_right_locked"),
+            # The vehicles of the SSDP brands report one lock state
+            ("doors", "doors_locked"),
             ("trunk", "trunk_locked"),
             ("window_driver", "window_driver_closed"),
             ("window_passenger", "window_passenger_closed"),

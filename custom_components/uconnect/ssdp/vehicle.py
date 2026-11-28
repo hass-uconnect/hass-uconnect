@@ -12,8 +12,9 @@ def has_battery(vehicle: Vehicle) -> bool:
     at times, e.g. the state of charge of a plug-in hybrid.
     """
 
-    telemetry = vehicle.raw_telemetry or {}
-    energies = telemetry.get("vehicle", {}).get("energies")
+    telemetry = vehicle.raw_telemetry
+    data = telemetry.get("vehicle") if isinstance(telemetry, dict) else None
+    energies = data.get("energies") if isinstance(data, dict) else None
     if isinstance(energies, list) and any(
         isinstance(e, dict) and str(e.get("type", "")).lower() == "electric"
         for e in energies

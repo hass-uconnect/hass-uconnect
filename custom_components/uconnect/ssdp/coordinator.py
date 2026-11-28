@@ -129,6 +129,8 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         self._platform_vins: frozenset[str] | None = None
         self._platform_entities: frozenset[tuple[str, str, str]] = frozenset()
         self._reload_scheduled = False
+        # The actions the vehicles support, registered by the entry setup
+        self._services: frozenset[str] | None = None
 
         data = config_entry.data
         verify_ssl = not data.get(CONF_DISABLE_TLS_VERIFICATION)
@@ -222,8 +224,33 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
             normalize_vehicle_numbers(vehicle)
 
         self._update_vehicles()
+        self._update_services()
 
         return True
+
+    def _update_services(self) -> None:
+        """Register or remove the actions when what the vehicles support
+        changes, e.g. when the telemetry of their battery comes back"""
+
+        # These modules import this one
+        from ..services import async_setup_services
+        from .services import SSDP_SERVICES
+
+        supported = frozenset(
+            name
+            for name, service in SSDP_SERVICES.items()
+            if any(
+                service.supported is None or service.supported(self, v)
+                for v in self.vehicles.values()
+            )
+        )
+
+        if self._services is None:
+            # The entry setup registers them
+            self._services = supported
+        elif supported != self._services:
+            self._services = supported
+            async_setup_services(self.hass)
 
     def _update_vehicles(self) -> None:
         """Expose the vehicles that no other entry provides.

@@ -215,11 +215,14 @@ async def async_ssdp_enroll(
     """Set up remote commands with the SMS code and the PIN, return the form
     errors"""
 
+    code = user_input[CONF_SMS_CODE].strip()
+    pin = user_input[CONF_PIN].strip()
+    if not code or not pin:
+        return {"base": "invalid_code"}
+
     previous = client.state.soft_token
     try:
-        await client.enroll_finish(
-            user_input[CONF_SMS_CODE].strip(), user_input[CONF_PIN].strip()
-        )
+        await client.enroll_finish(code, pin)
     except Exception as err:
         # The soft token is activated first, which uses the SMS code: if only
         # the remote-command token could not be requested after that, the

@@ -47,6 +47,7 @@ from custom_components.uconnect.coordinator import (
     async_get_coordinators,
 )
 from custom_components.uconnect.frontend_cards import _build_vehicle_list
+from custom_components.uconnect.ssdp.vehicle import has_battery
 
 from .conftest import (
     EV_VIN,
@@ -1448,3 +1449,90 @@ async def test_uconnect_entry_takes_over_vehicle(
 
     for entry in (ssdp_entry, uconnect_entry):
         await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_telemetry_without_vehicle_data(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    ssdp_client.telemetry[SSDP_VIN] = {"vehicle": None, "createdAt": "x"}
+    entry = make_ssdp_entry()
+    await setup_entry(hass, entry)
+
+    assert entry.state is ConfigEntryState.LOADED
+    vehicle = entry.runtime_data.vehicles[SSDP_VIN]
+    assert not has_battery(vehicle)
+    assert not hass.services.has_service(DOMAIN, "charge_now")
+
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+@pytest.mark.parametrize(
+    "data", [{"sms_code": "  ", "pin": "1234"}, {"sms_code": "123456", "pin": " "}]
+)
+async def test_blank_code_or_pin(
+    hass: HomeAssistant,
+    setup_ssdp_integration: MockConfigEntry,
+    ssdp_client: FakeSsdpClientFactory,
+    data: dict[str, str],
+) -> None:
+    result = await hass.config_entries.options.async_init(
+        setup_ssdp_integration.entry_id
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "ssdp_send_sms"}
+    )
+    result = await hass.config_entries.options.async_configure(result["flow_id"], data)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_code"}
+    ssdp_client.last.enroll_finish.assert_not_awaited()
+
+
+async def test_vehicle_card_door_lock(
+    hass: HomeAssistant,
+    config_entry: MockConfigEntry,
+    fake_client: FakeClient,
+    ssdp_config_entry: MockConfigEntry,
+    ssdp_client: FakeSsdpClientFactory,
+) -> None:
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    vehicles = {v["vin"]: v["entities"] for v in _build_vehicle_list(hass)}
+    assert vehicles[SSDP_VIN]["doors"] == entity_id(
+        hass, "binary_sensor", "doors_locked"
+    )
+    # Uconnect vehicles keep their per-door lock states
+    assert "doors" not in vehicles[EV_VIN]
+    assert "door_driver" in vehicles[EV_VIN]
+
+    for entry in (config_entry, ssdp_config_entry):
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_charge_now_registered_when_battery_telemetry_returns(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    entry = make_ssdp_entry()
+    await setup_entry(hass, entry)
+    assert hass.services.has_service(DOMAIN, "charge_now")
+    await hass.config_entries.async_unload(entry.entry_id)
+
+    # Set up again without the telemetry of the battery: its entities exist
+    # already, so its return does not reload the entry
+    telemetry = ssdp_client.telemetry[SSDP_VIN]
+    energies = telemetry["vehicle"]["energies"]
+    telemetry["vehicle"]["energies"] = [e for e in energies if e["type"] != "Electric"]
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert not hass.services.has_service(DOMAIN, "charge_now")
+    instances = len(ssdp_client.instances)
+
+    telemetry["vehicle"]["energies"] = energies
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert len(ssdp_client.instances) == instances
+    assert hass.services.has_service(DOMAIN, "charge_now")
+
+    await hass.config_entries.async_unload(entry.entry_id)
