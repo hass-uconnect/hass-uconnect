@@ -16,6 +16,9 @@ US, Canada, EU, Asia & LATAM (Brazil) regions are supported. Try a different reg
 - Maserati: Unknown ❔
 - Ram: Works ✅
 
+Vehicles of the brands' **2.0 apps** (Jeep® 2.0, MyPeugeot 2.0, …) use another
+cloud, see [Stellantis 2.0 Apps](#stellantis-20-apps-ssdp).
+
 ## Tested Vehicles
 
 - See tested and working vehicles at the following discussion post: https://github.com/hass-uconnect/hass-uconnect/discussions/5
@@ -68,6 +71,44 @@ US, Canada, EU, Asia & LATAM (Brazil) regions are supported. Try a different reg
   - `Send Destination`: Sends a destination (`latitude`, `longitude` and an optional `name`) to the vehicle navigation system
   - `Comfort On/Off`: Another alternative to the above HVAC commands (depends on make/model)
   - `Update`: Asks the integration to update the data from the API immediately
+
+## Stellantis 2.0 Apps (SSDP)
+
+Newer vehicles, such as the Jeep Compass MY2026, are shown in the brands' "2.0" apps
+instead of the Uconnect ones. These apps use another Stellantis cloud (SSDP), supported
+with the [py-stellantis-ssdp](https://github.com/hass-uconnect/py-stellantis-ssdp)
+library. Choose the brand ending in `_SSDP` when adding the integration:
+
+| Brand | App | Status |
+| --- | --- | --- |
+| `JEEP_EU_SSDP` | Jeep® 2.0 | Cloud API tested ✅ (Compass PHEV MY2026) |
+| `PEUGEOT_EU_SSDP` | MyPeugeot 2.0 | Untested ❔ |
+| `CITROEN_EU_SSDP` | MyCitroën 2.0 | Untested ❔ |
+| `OPEL_EU_SSDP` | MyOpel 2.0 | Untested ❔ |
+| `VAUXHALL_EU_SSDP` | MyVauxhall 2.0 | Untested ❔ |
+| `LANCIA_EU_SSDP` | MyLancia | Untested ❔ |
+
+The untested brands share the login and the cloud with Jeep 2.0, so they should work for
+the vehicles shown in their 2.0 app. Please report whether they do.
+
+- Log in with the email and password of the app. When the saved login expires, the
+  integration logs in again by itself.
+- **Remote commands** (door lock, engine start, climate preconditioning, charging,
+  horn, lights, wake-up, location) need a one-time setup: right after adding the
+  integration, or later under *Configure*, an SMS with a code is sent to the phone
+  number of the account. Enter the code and the PIN of the brand's app. The entities of
+  the remote commands are added once this is done, if *Add command entities* is enabled.
+- **Actions** for these vehicles: `Update`, `Engine On/Off`, `Precondition On/Off`,
+  `Lights`, `Horn` (these vehicles only), `Lock/Unlock Doors`, `Charge Now`,
+  `Deep Refresh` (wakes the vehicle up), `Refresh Location` and `Send Destination`. The
+  other actions are for Uconnect vehicles. Except `Update`, they need the remote command
+  setup.
+- A Stellantis account is shared by the brands. If two entries (e.g. `JEEP_EU_SSDP` and
+  `PEUGEOT_EU_SSDP` of the same account) list the same vehicle, it is only added by one
+  of them.
+- Not supported yet for these vehicles: trunk lock, charge schedules and the vehicle
+  image. Remote engine start is offered for all of them but untested: vehicles without
+  it report an error.
 
 ## SiriusXM Guardian Vehicles
 

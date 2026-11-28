@@ -26,6 +26,8 @@ from py_uconnect.command import (
 from .const import CONF_ADD_COMMAND_ENTITIES, DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
 from .entity import UconnectEntity, should_add
+from .ssdp import button as ssdp_button
+from .ssdp.coordinator import SsdpDataUpdateCoordinator
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -79,6 +81,10 @@ async def async_setup_entry(
     config_entry: UconnectConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
+    if isinstance(config_entry.runtime_data, SsdpDataUpdateCoordinator):
+        await ssdp_button.async_setup_entry(hass, config_entry, async_add_entities)
+        return
+
     coordinator = config_entry.runtime_data
     entities: list[ButtonEntity] = []
 

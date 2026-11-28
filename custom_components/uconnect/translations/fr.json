@@ -19,6 +19,26 @@
                 "data": {
                     "password": "Mot de passe"
                 }
+            },
+            "ssdp_remote": {
+                "title": "Commandes à distance",
+                "description": "Connexion réussie. Les commandes à distance (portes, climatisation, klaxon…) demandent une configuration unique : un SMS avec un code est envoyé au numéro de téléphone du compte, puis vous saisissez le code et le code PIN de l'application de la marque. Cela peut aussi être fait plus tard dans les options de l'intégration.",
+                "menu_options": {
+                    "ssdp_send_sms": "Configurer les commandes à distance maintenant (envoie un SMS)",
+                    "ssdp_finish": "Terminer sans commandes à distance"
+                }
+            },
+            "ssdp_send_sms": {
+                "title": "Commandes à distance",
+                "description": "Le SMS n'a pas pu être envoyé. Validez pour réessayer."
+            },
+            "ssdp_enroll": {
+                "title": "Commandes à distance",
+                "description": "Saisissez le code du SMS envoyé au numéro de téléphone du compte et le code PIN de l'application de la marque.",
+                "data": {
+                    "sms_code": "Code reçu par SMS",
+                    "pin": "Code PIN"
+                }
             }
         },
         "abort": {
@@ -28,7 +48,8 @@
         "error": {
             "invalid_auth": "La connexion aux serveurs Uconnect a échoué. Vérifiez que votre véhicule n'utilise pas SiriusXM Guardian et que vos identifiants sont corrects.",
             "cannot_connect": "Impossible de se connecter aux serveurs Uconnect. Réessayez plus tard.",
-            "unknown": "Erreur inattendue"
+            "unknown": "Erreur inattendue",
+            "invalid_code": "Le code du SMS ou le code PIN a été refusé."
         }
     },
     "options": {
@@ -41,7 +62,42 @@
                     "charging_refresh_interval": "Actualisation complète pendant la charge (min, 0 pour désactiver, 15 minimum)",
                     "add_command_entities": "Ajouter les entités de commande (bouton/verrou/interrupteur)"
                 }
+            },
+            "ssdp_menu": {
+                "title": "Options",
+                "menu_options": {
+                    "ssdp_settings": "Paramètres",
+                    "ssdp_send_sms": "Configurer les commandes à distance (envoie un SMS)"
+                }
+            },
+            "ssdp_settings": {
+                "title": "Paramètres",
+                "data": {
+                    "scan_interval": "Intervalle d'interrogation (min)",
+                    "pin": "Code PIN",
+                    "add_command_entities": "Ajouter les entités de commande (bouton/verrou/interrupteur)"
+                }
+            },
+            "ssdp_send_sms": {
+                "title": "Commandes à distance",
+                "description": "Le SMS n'a pas pu être envoyé. Validez pour réessayer."
+            },
+            "ssdp_enroll": {
+                "title": "Commandes à distance",
+                "description": "Saisissez le code du SMS envoyé au numéro de téléphone du compte et le code PIN de l'application de la marque.",
+                "data": {
+                    "sms_code": "Code reçu par SMS",
+                    "pin": "Code PIN"
+                }
             }
+        },
+        "error": {
+            "invalid_code": "Le code du SMS ou le code PIN a été refusé.",
+            "cannot_connect": "Impossible de se connecter aux serveurs Uconnect. Réessayez plus tard.",
+            "unknown": "Erreur inattendue"
+        },
+        "abort": {
+            "not_loaded": "L'entrée doit être chargée pour configurer les commandes à distance."
         }
     },
     "entity": {
@@ -117,6 +173,36 @@
             },
             "svla": {
                 "name": "Alerte véhicule volé"
+            },
+            "doors_locked": {
+                "name": "Portes"
+            },
+            "moving": {
+                "name": "En mouvement"
+            },
+            "door_driver_open": {
+                "name": "Porte conducteur ouverte"
+            },
+            "door_passenger_open": {
+                "name": "Porte passager ouverte"
+            },
+            "door_rear_left_open": {
+                "name": "Porte arrière gauche ouverte"
+            },
+            "door_rear_right_open": {
+                "name": "Porte arrière droite ouverte"
+            },
+            "trunk_open": {
+                "name": "Coffre ouvert"
+            },
+            "hood_open": {
+                "name": "Capot ouvert"
+            },
+            "rear_window_open": {
+                "name": "Lunette arrière ouverte"
+            },
+            "roof_window_open": {
+                "name": "Toit ouvrant ouvert"
             }
         },
         "button": {
@@ -140,6 +226,9 @@
             },
             "reset_battery_learning": {
                 "name": "Réinitialiser l'apprentissage de la batterie"
+            },
+            "button_horn": {
+                "name": "Klaxon"
             }
         },
         "device_tracker": {
@@ -252,6 +341,18 @@
             },
             "charging_rate": {
                 "name": "Vitesse de charge"
+            },
+            "battery_12v_level": {
+                "name": "Niveau de la batterie 12 V"
+            },
+            "battery_health": {
+                "name": "État de santé de la batterie haute tension"
+            },
+            "battery_temperature": {
+                "name": "Température de la batterie haute tension"
+            },
+            "charging_status": {
+                "name": "État de la charge"
             }
         },
         "switch": {
@@ -373,6 +474,16 @@
         "lights": {
             "name": "Feux",
             "description": "Faire clignoter les feux",
+            "fields": {
+                "device_id": {
+                    "name": "Véhicule",
+                    "description": "Véhicule ciblé"
+                }
+            }
+        },
+        "horn": {
+            "name": "Klaxon",
+            "description": "Faire retentir le klaxon (véhicules des applications 2.0)",
             "fields": {
                 "device_id": {
                     "name": "Véhicule",

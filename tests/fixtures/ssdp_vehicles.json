@@ -1,0 +1,12 @@
+{
+  "_embedded": {
+    "vehicles": [
+      {
+        "vin": "ZACNJDE00SPA00001",
+        "brandCode": "JEEP",
+        "familyCode": "J4U",
+        "fuelType": "PHEV"
+      }
+    ]
+  }
+}

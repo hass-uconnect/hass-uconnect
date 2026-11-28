@@ -24,6 +24,7 @@ from py_uconnect.brands import (
     RAM_LATAM,
     RAM_US,
 )
+import stellantis_ssdp
 
 DOMAIN: str = "uconnect"
 
@@ -31,6 +32,9 @@ CONF_BRAND_REGION: str = "brand_region"
 CONF_DISABLE_TLS_VERIFICATION: str = "disable_tls_verification"
 CONF_ADD_COMMAND_ENTITIES: str = "add_command_entities"
 CONF_CHARGING_REFRESH_INTERVAL: str = "charging_refresh_interval"
+# SSDP entries: tokens and inWebo soft token (stellantis_ssdp.State)
+CONF_SSDP_STATE: str = "ssdp_state"
+CONF_SMS_CODE: str = "sms_code"
 
 BRANDS = {
     1: FIAT_EU.name,
@@ -54,7 +58,31 @@ BRANDS = {
     18: JEEP_LATAM.name,
     19: FIAT_LATAM.name,
     20: RAM_LATAM.name,
+    # Brands of the Stellantis SSDP cloud (the brands' "2.0" apps), served by
+    # py-stellantis-ssdp instead of py-uconnect
+    21: "JEEP_EU_SSDP",
+    22: "PEUGEOT_EU_SSDP",
+    23: "CITROEN_EU_SSDP",
+    24: "OPEL_EU_SSDP",
+    25: "VAUXHALL_EU_SSDP",
+    26: "LANCIA_EU_SSDP",
 }
+
+SSDP_BRANDS: dict[int, stellantis_ssdp.Brand] = {
+    21: stellantis_ssdp.JEEP_EU,
+    22: stellantis_ssdp.PEUGEOT_EU,
+    23: stellantis_ssdp.CITROEN_EU,
+    24: stellantis_ssdp.OPEL_EU,
+    25: stellantis_ssdp.VAUXHALL_EU,
+    26: stellantis_ssdp.LANCIA_EU,
+}
+
+
+def is_ssdp_brand(brand_region: int) -> bool:
+    """Whether the brand number is one of the SSDP cloud"""
+
+    return brand_region in SSDP_BRANDS
+
 
 DEFAULT_PIN: str = ""
 DEFAULT_SCAN_INTERVAL: int = 5

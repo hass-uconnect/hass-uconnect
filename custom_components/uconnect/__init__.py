@@ -11,17 +11,21 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .config_flow import entry_unique_id
-from .const import BRANDS, CONF_BRAND_REGION, DOMAIN
+from .const import BRANDS, CONF_BRAND_REGION, DOMAIN, is_ssdp_brand
 from .coordinator import (
     UconnectConfigEntry,
     UconnectDataUpdateCoordinator,
-    async_get_coordinators,
 )
 from .frontend_cards import (
     async_setup_frontend_cards,
     async_unload_frontend_cards_if_last_entry,
 )
 from .services import async_setup_services, async_unload_services
+from .ssdp.coordinator import (
+    SsdpDataUpdateCoordinator,
+    async_get_all_coordinators,
+    async_release_vehicles,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +101,11 @@ async def async_setup_entry(
 
     warn_if_changed_by_reauth(config_entry)
 
-    coordinator = UconnectDataUpdateCoordinator(hass, config_entry)
+    coordinator: UconnectDataUpdateCoordinator | SsdpDataUpdateCoordinator
+    if is_ssdp_brand(config_entry.data[CONF_BRAND_REGION]):
+        coordinator = SsdpDataUpdateCoordinator(hass, config_entry)
+    else:
+        coordinator = UconnectDataUpdateCoordinator(hass, config_entry)
 
     # Raises ConfigEntryNotReady, or ConfigEntryAuthFailed to start reauth
     await coordinator.async_config_entry_first_refresh()
@@ -124,9 +132,15 @@ async def async_unload_entry(
     )
 
     if unload_ok:
+        # A disabled entry stays unloaded: other entries can take its vehicles
+        if config_entry.disabled_by is not None:
+            async_release_vehicles(hass, config_entry.entry_id)
+
+        # The entries left, of both backends: the actions and the vehicle card
+        # are shared by their vehicles
         remaining = [
             c
-            for c in async_get_coordinators(hass)
+            for c in async_get_all_coordinators(hass)
             if c.config_entry.entry_id != config_entry.entry_id
         ]
         if not remaining:
@@ -136,3 +150,11 @@ async def async_unload_entry(
             async_setup_services(hass)
 
     return unload_ok
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, config_entry: UconnectConfigEntry
+) -> None:
+    """Release the vehicles of a removed entry to the other entries"""
+
+    async_release_vehicles(hass, config_entry.entry_id)

@@ -732,9 +732,16 @@ class UconnectVehicleCard extends HTMLElement {
       .filter((s) => hasUsableState(s))
       .map((s) => !isOnState(s));
 
-    const doorStates = secureStates(["door_driver", "door_passenger", "door_rear_left", "door_rear_right"]);
+    // Without per-door lock states, the lock state of all the doors (vehicles
+    // of the SSDP brands)
+    const perDoorKeys = ["door_driver", "door_passenger", "door_rear_left", "door_rear_right"];
+    const perDoorStates = secureStates(perDoorKeys);
+    const doorStates = perDoorStates.length > 0 ? perDoorStates : secureStates(["doors"]);
     const allDoorsLocked = doorStates.length > 0 && doorStates.every(Boolean);
-    const anyDoorEntity = entities.door_driver || entities.door_passenger || "";
+    // The indicator opens an entity its state comes from: the first usable
+    // door, else all the doors
+    const doorKey = [...perDoorKeys, "doors"].find((key) => entities[key] && hasUsableState(read(key)));
+    const anyDoorEntity = (doorKey && entities[doorKey]) || entities.door_driver || entities.door_passenger || entities.doors || "";
 
     const windowStates = secureStates(["window_driver", "window_passenger", "window_rear_left", "window_rear_right", "sunroof"]);
     const allWindowsClosed = windowStates.length > 0 && windowStates.every(Boolean);

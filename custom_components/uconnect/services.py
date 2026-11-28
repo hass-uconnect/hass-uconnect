@@ -42,6 +42,8 @@ import voluptuous as vol
 
 from .const import DOMAIN
 from .coordinator import UconnectDataUpdateCoordinator, async_get_coordinators
+from .ssdp.coordinator import SsdpDataUpdateCoordinator, async_get_all_coordinators
+from .ssdp.services import SSDP_BASE_SCHEMA, SSDP_SERVICES
 
 SERVICE_UPDATE = "update"
 SERVICE_SET_CHARGE_SCHEDULE = "set_charge_schedule"
@@ -232,6 +234,32 @@ SERVICES: dict[str, UconnectService] = {
 }
 
 
+# All the action names: those of the Uconnect vehicles, then those only the
+# SSDP vehicles have
+SERVICE_NAMES: tuple[str, ...] = tuple(dict.fromkeys([*SERVICES, *SSDP_SERVICES]))
+
+
+def _uconnect_supported(name: str, vehicles: list[Vehicle]) -> bool:
+    """Whether a Uconnect vehicle supports the action"""
+
+    service = SERVICES.get(name)
+    return service is not None and (
+        service.supported is None or any(service.supported(v) for v in vehicles)
+    )
+
+
+def _ssdp_supported(name: str, hass: HomeAssistant) -> bool:
+    """Whether a vehicle of an SSDP brand supports the action"""
+
+    service = SSDP_SERVICES.get(name)
+    return service is not None and any(
+        service.supported is None or service.supported(c, v)
+        for c in async_get_all_coordinators(hass)
+        if isinstance(c, SsdpDataUpdateCoordinator)
+        for v in c.vehicles.values()
+    )
+
+
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
     """Register the actions supported by at least one vehicle and remove the
@@ -244,14 +272,18 @@ def async_setup_services(hass: HomeAssistant) -> None:
         v for c in async_get_coordinators(hass) for v in c.client.vehicles.values()
     ]
 
-    for name, service in SERVICES.items():
-        supported = service.supported is None or any(
-            service.supported(v) for v in vehicles
-        )
+    for name in SERVICE_NAMES:
+        supported = _uconnect_supported(name, vehicles) or _ssdp_supported(name, hass)
         registered = hass.services.has_service(DOMAIN, name)
 
         if supported and not registered:
-            hass.services.async_register(DOMAIN, name, handle, schema=service.schema)
+            service = SERVICES.get(name)
+            schema = (
+                service.schema
+                if service is not None
+                else SSDP_SERVICES[name].schema or SSDP_BASE_SCHEMA
+            )
+            hass.services.async_register(DOMAIN, name, handle, schema=schema)
         elif not supported and registered:
             hass.services.async_remove(DOMAIN, name)
 
@@ -260,7 +292,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
 def async_unload_services(hass: HomeAssistant) -> None:
     """Remove all actions."""
 
-    for name in SERVICES:
+    for name in SERVICE_NAMES:
         if hass.services.has_service(DOMAIN, name):
             hass.services.async_remove(DOMAIN, name)
 
@@ -268,12 +300,19 @@ def async_unload_services(hass: HomeAssistant) -> None:
 async def _async_handle_service(hass: HomeAssistant, call: ServiceCall) -> None:
     coordinator, vin = _resolve_target(hass, call)
 
+    if isinstance(coordinator, SsdpDataUpdateCoordinator):
+        await _async_handle_ssdp_service(hass, coordinator, vin, call)
+        return
+
     vehicle = coordinator.client.vehicles.get(vin)
     if vehicle is None:
         raise ServiceValidationError(f"Vehicle {vin} not found")
 
-    service = SERVICES[call.service]
-    if service.supported is not None and not service.supported(vehicle):
+    # The actions only SSDP vehicles have are not in the table
+    service = SERVICES.get(call.service)
+    if service is None or (
+        service.supported is not None and not service.supported(vehicle)
+    ):
         raise ServiceValidationError(
             f"Action {call.service} is not supported by vehicle {vin}"
         )
@@ -281,20 +320,56 @@ async def _async_handle_service(hass: HomeAssistant, call: ServiceCall) -> None:
     await service.handler(hass, coordinator, vehicle, call)
 
 
+async def _async_handle_ssdp_service(
+    hass: HomeAssistant,
+    coordinator: SsdpDataUpdateCoordinator,
+    vin: str,
+    call: ServiceCall,
+) -> None:
+    """Run an action for a vehicle of an SSDP brand"""
+
+    vehicle = coordinator.vehicles.get(vin)
+    if vehicle is None:
+        raise ServiceValidationError(f"Vehicle {vin} not found")
+
+    service = SSDP_SERVICES.get(call.service)
+    if service is None or (
+        service.supported is not None and not service.supported(coordinator, vehicle)
+    ):
+        raise ServiceValidationError(
+            f"Action {call.service} is not supported by vehicle {vin}"
+        )
+
+    await service.handler(hass, coordinator, vehicle, call)
+
+
+def _vehicles(
+    coordinator: UconnectDataUpdateCoordinator | SsdpDataUpdateCoordinator,
+) -> dict[str, Any]:
+    """The vehicles provided by an entry"""
+
+    if isinstance(coordinator, SsdpDataUpdateCoordinator):
+        return coordinator.vehicles
+    return coordinator.client.vehicles
+
+
 def _resolve_target(
     hass: HomeAssistant, call: ServiceCall
-) -> tuple[UconnectDataUpdateCoordinator, str]:
+) -> tuple[UconnectDataUpdateCoordinator | SsdpDataUpdateCoordinator, str]:
     """Return the coordinator and the VIN of the vehicle targeted by an action.
 
     The device can be omitted if there is a single vehicle.
     """
 
-    coordinators = async_get_coordinators(hass)
+    coordinators = async_get_all_coordinators(hass)
 
     device_id = call.data.get(ATTR_DEVICE_ID)
     if device_id is None:
-        if len(coordinators) == 1 and len(coordinators[0].client.vehicles) == 1:
-            return coordinators[0], next(iter(coordinators[0].client.vehicles))
+        # Entries can have no vehicles: those of an account shared by two
+        # SSDP entries are only provided by one of them
+        targets = [(c, vin) for c in coordinators for vin in _vehicles(c)]
+        if len(targets) == 1:
+            return targets[0]
         raise ServiceValidationError("A vehicle must be selected")
 
     device = dr.async_get(hass).async_get(device_id)
@@ -312,9 +387,8 @@ def _resolve_target(
         entry_ids = set(device.config_entries)
 
     for coordinator in coordinators:
-        if (
-            coordinator.config_entry.entry_id in entry_ids
-            and vin in coordinator.client.vehicles
+        if coordinator.config_entry.entry_id in entry_ids and vin in _vehicles(
+            coordinator
         ):
             return coordinator, vin
 

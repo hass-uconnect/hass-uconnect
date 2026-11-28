@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 import dataclasses
 from datetime import datetime, timedelta
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import (
@@ -46,9 +46,15 @@ from .const import (
     MIN_CHARGING_REFRESH_INTERVAL,
 )
 
+if TYPE_CHECKING:
+    from .ssdp.coordinator import SsdpDataUpdateCoordinator
+
 _LOGGER = logging.getLogger(__name__)
 
-type UconnectConfigEntry = ConfigEntry[UconnectDataUpdateCoordinator]
+# Entries of SSDP brands have an SsdpDataUpdateCoordinator
+type UconnectConfigEntry = ConfigEntry[
+    UconnectDataUpdateCoordinator | SsdpDataUpdateCoordinator
+]
 
 # HTTP statuses meaning that an endpoint is not supported by a vehicle
 UNSUPPORTED_STATUSES = (400, 403, 404)

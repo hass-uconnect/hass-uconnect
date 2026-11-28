@@ -20,6 +20,8 @@ from py_uconnect import Vehicle
 from .const import DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
 from .entity import UconnectEntity, should_add
+from .ssdp import binary_sensor as ssdp_binary_sensor
+from .ssdp.coordinator import SsdpDataUpdateCoordinator
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -212,6 +214,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up binary_sensor platform."""
+    if isinstance(config_entry.runtime_data, SsdpDataUpdateCoordinator):
+        await ssdp_binary_sensor.async_setup_entry(
+            hass, config_entry, async_add_entities
+        )
+        return
 
     coordinator = config_entry.runtime_data
     entities: list[BinarySensorEntity] = []

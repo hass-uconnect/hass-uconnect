@@ -16,6 +16,7 @@ from py_uconnect import APIError, UconnectError, Vehicle
 from .const import DOMAIN
 from .coordinator import UconnectConfigEntry, UconnectDataUpdateCoordinator
 from .entity import UconnectEntity
+from .ssdp.coordinator import SsdpDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,6 +43,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Uconnect image entities."""
+    if isinstance(config_entry.runtime_data, SsdpDataUpdateCoordinator):
+        # Nothing of this platform for the vehicles of SSDP brands
+        return
+
     coordinator = config_entry.runtime_data
 
     entities = []
