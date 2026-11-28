@@ -215,17 +215,28 @@ async def async_ssdp_enroll(
     """Set up remote commands with the SMS code and the PIN, return the form
     errors"""
 
+    previous = client.state.soft_token
     try:
         await client.enroll_finish(
             user_input[CONF_SMS_CODE].strip(), user_input[CONF_PIN].strip()
         )
-    except RemoteAuthenticationError as err:
-        _LOGGER.warning("Remote command setup failed: %s", err)
-        return {"base": "invalid_code"}
-    except SSDPError as err:
-        _LOGGER.warning("Unable to connect: %s", err)
-        return {"base": "cannot_connect"}
-    except Exception:
+    except Exception as err:
+        # The soft token is activated first, which uses the SMS code: if only
+        # the remote-command token could not be requested after that, the
+        # setup is done and the token is requested by the first command
+        if client.enrolled and client.state.soft_token is not previous:
+            _LOGGER.warning(
+                "Remote commands are set up, the remote command token will be "
+                "requested by the first command: %s",
+                err,
+            )
+            return {}
+        if isinstance(err, RemoteAuthenticationError):
+            _LOGGER.warning("Remote command setup failed: %s", err)
+            return {"base": "invalid_code"}
+        if isinstance(err, SSDPError):
+            _LOGGER.warning("Unable to connect: %s", err)
+            return {"base": "cannot_connect"}
         _LOGGER.exception("Unexpected exception")
         return {"base": "unknown"}
 

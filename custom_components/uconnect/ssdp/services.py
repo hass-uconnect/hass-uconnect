@@ -18,6 +18,7 @@ from stellantis_ssdp import RemoteCommand, Vehicle, remote
 import voluptuous as vol
 
 from .coordinator import SsdpDataUpdateCoordinator
+from .vehicle import has_battery
 
 ATTR_LATITUDE = "latitude"
 ATTR_LONGITUDE = "longitude"
@@ -108,9 +109,7 @@ SSDP_SERVICES: dict[str, SsdpService] = {
     "horn": _command_service(remote.horn, schema=SSDP_BASE_SCHEMA),
     "doors_lock": _command_service(remote.lock_doors),
     "doors_unlock": _command_service(remote.unlock_doors),
-    "charge_now": _command_service(
-        lambda: remote.charge_now(True), lambda v: v.state_of_charge is not None
-    ),
+    "charge_now": _command_service(lambda: remote.charge_now(True), has_battery),
     "deep_refresh": _command_service(remote.wakeup),
     "refresh_location": _command_service(remote.locate),
     "send_destination": SsdpService(_handle_send_destination, _enrolled),

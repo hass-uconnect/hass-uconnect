@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
+from freezegun.api import FrozenDateTimeFactory
+from homeassistant.config_entries import (
+    SOURCE_USER,
+    ConfigEntryDisabler,
+    ConfigEntryState,
+)
 from homeassistant.const import CONF_PASSWORD, CONF_PIN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -14,7 +20,10 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from py_uconnect.command import COMMAND_DOORS_LOCK
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 import stellantis_ssdp
 from stellantis_ssdp import (
     AuthenticationError,
@@ -1185,27 +1194,210 @@ async def test_owner_reload_keeps_vehicle(
         await hass.config_entries.async_unload(entry.entry_id)
 
 
-async def test_vehicle_handed_over_when_owner_unloaded(
+async def test_vehicle_kept_while_owner_unloaded(
     hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    """An entry being reloaded or set up again keeps its vehicles"""
+
+    first = make_ssdp_entry(brand=21)
+    second = make_ssdp_entry(brand=22)
+    for entry in (first, second):
+        await setup_entry(hass, entry)
+    instances = len(ssdp_client.instances)
+
+    await hass.config_entries.async_unload(first.entry_id)
+    await second.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert second.runtime_data.vehicles == {}
+    assert len(ssdp_client.instances) == instances
+
+    assert await hass.config_entries.async_setup(first.entry_id)
+    await hass.async_block_till_done()
+    assert first.runtime_data.vehicles.keys() == {SSDP_VIN}
+
+    for entry in (first, second):
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_vehicle_handed_over_when_owner_removed(
+    hass: HomeAssistant,
+    ssdp_client: FakeSsdpClientFactory,
+    freezer: FrozenDateTimeFactory,
 ) -> None:
     first = make_ssdp_entry(brand=21)
     second = make_ssdp_entry(brand=22)
     for entry in (first, second):
         await setup_entry(hass, entry)
-    assert second.runtime_data.vehicles == {}
+    assert registered(hass, second) == {}
 
-    await hass.config_entries.async_unload(first.entry_id)
-    await hass.async_block_till_done()
-    await second.runtime_data.async_refresh()
+    await hass.config_entries.async_remove(first.entry_id)
     await hass.async_block_till_done()
 
-    # The second entry was reloaded and provides the vehicle with its entities
+    # The second entry has no entities but polls, notices the vehicle is free
+    # and is reloaded to add its entities
+    freezer.tick(timedelta(minutes=6))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
     assert second.state is ConfigEntryState.LOADED
     assert second.runtime_data.vehicles.keys() == {SSDP_VIN}
     assert registered(hass, second)[Platform.SENSOR] == SENSORS
     assert state(hass, "sensor", "state_of_charge").state == "49"
 
     await hass.config_entries.async_unload(second.entry_id)
+
+
+async def test_vehicle_handed_over_when_owner_disabled(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    first = make_ssdp_entry(brand=21)
+    second = make_ssdp_entry(brand=22)
+    for entry in (first, second):
+        await setup_entry(hass, entry)
+
+    await hass.config_entries.async_set_disabled_by(
+        first.entry_id, ConfigEntryDisabler.USER
+    )
+    await hass.async_block_till_done()
+    await second.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert second.runtime_data.vehicles.keys() == {SSDP_VIN}
+    assert registered(hass, second)[Platform.SENSOR] == SENSORS
+
+    await hass.config_entries.async_unload(second.entry_id)
+
+
+async def test_vehicle_handed_over_when_owner_account_drops_it(
+    hass: HomeAssistant,
+    ssdp_client: FakeSsdpClientFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    first = make_ssdp_entry(brand=21)
+    second = make_ssdp_entry(brand=22)
+    for entry in (first, second):
+        await setup_entry(hass, entry)
+    assert first.runtime_data.vehicles.keys() == {SSDP_VIN}
+
+    # The first account no longer lists the vehicle: the first entry unloads
+    # its entities before releasing it
+    ssdp_client.lists_by_brand["JEEP_EU"] = []
+    await first.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert first.runtime_data.vehicles == {}
+
+    await second.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert second.runtime_data.vehicles.keys() == {SSDP_VIN}
+    assert registered(hass, second)[Platform.SENSOR] == SENSORS
+    assert state(hass, "sensor", "state_of_charge").state == "49"
+    assert "does not generate unique IDs" not in caplog.text
+
+    for entry in (first, second):
+        await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_entities_added_when_telemetry_comes(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    telemetry = ssdp_client.telemetry.pop(SSDP_VIN)
+    entry = make_ssdp_entry()
+    await setup_entry(hass, entry)
+
+    entities = registered(hass, entry)
+    assert entities[Platform.SENSOR] == {"fuel_type"}
+    assert Platform.BINARY_SENSOR not in entities
+
+    ssdp_client.telemetry[SSDP_VIN] = telemetry
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert len(ssdp_client.instances) == 2
+    entities = registered(hass, entry)
+    assert entities[Platform.SENSOR] == SENSORS
+    assert entities[Platform.BINARY_SENSOR] == BINARY_SENSORS
+
+    # Nothing new: no more reloads
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert len(ssdp_client.instances) == 2
+
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_plug_in_hybrid_without_state_of_charge(
+    hass: HomeAssistant, ssdp_client: FakeSsdpClientFactory
+) -> None:
+    for energy in ssdp_client.telemetry[SSDP_VIN]["vehicle"]["energies"]:
+        if energy["type"] == "Electric":
+            del energy["level"]
+
+    entry = make_ssdp_entry()
+    await setup_entry(hass, entry)
+
+    # The electric range, not the fuel range
+    assert state(hass, "sensor", "distance_to_empty").state == "22"
+    assert state(hass, "sensor", "range_gas").state == "432"
+    assert "switch_charging" in registered(hass, entry)[Platform.SWITCH]
+    assert hass.services.has_service(DOMAIN, "charge_now")
+
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+@pytest.mark.usefixtures("no_setup", "login")
+async def test_enrollment_kept_when_token_request_fails(
+    hass: HomeAssistant, flow_client: FakeSsdpClientFactory
+) -> None:
+    """The SMS code is used once the soft token is activated: if requesting
+    the remote command token fails after that, the setup is kept"""
+
+    result = await start_flow(hass, USER_INPUT)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "ssdp_send_sms"}
+    )
+    client = flow_client.last
+
+    async def enroll_finish(code: str, pin: str) -> None:
+        client.state.soft_token = make_ssdp_state().soft_token
+        raise SSDPConnectionError("token request failed")
+
+    client.enroll_finish.side_effect = enroll_finish
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"sms_code": "123456", "pin": "1234"}
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    state = State.from_dict(result["result"].data[CONF_SSDP_STATE])
+    assert state.enrolled
+    assert state.remote_token is None
+    assert result["result"].options == {CONF_ADD_COMMAND_ENTITIES: True}
+
+
+async def test_failed_new_setup_keeps_errors(
+    hass: HomeAssistant,
+    setup_ssdp_integration: MockConfigEntry,
+    ssdp_client: FakeSsdpClientFactory,
+) -> None:
+    """Setting up remote commands again with a wrong code shows the error,
+    although the entry was set up before"""
+
+    entry = setup_ssdp_integration
+    ssdp_client.last.enroll_finish.side_effect = RemoteAuthenticationError(
+        "wrong activation code"
+    )
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "ssdp_send_sms"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"sms_code": "000000", "pin": "1234"}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_code"}
 
 
 async def test_uconnect_entry_takes_over_vehicle(

@@ -288,7 +288,9 @@ class FakeSsdpClient:
         return self.state.enrolled
 
     async def _refresh(self) -> dict[str, SsdpVehicle]:
-        items = self.factory.list_items
+        items = self.factory.lists_by_brand.get(
+            self.brand.name, self.factory.list_items
+        )
         for item in items:
             vehicle = self.vehicles.get(item["vin"]) or SsdpVehicle(vin=item["vin"])
             apply_ssdp_list_item(vehicle, item)
@@ -321,6 +323,8 @@ class FakeSsdpClientFactory:
         self.telemetry: dict[str, dict[str, Any]] = {
             SSDP_VIN: load_fixture("ssdp_telemetry.json")
         }
+        # The vehicle list of the accounts of some brands, if not list_items
+        self.lists_by_brand: dict[str, list[dict[str, Any]]] = {}
         self.instances: list[FakeSsdpClient] = []
 
     def __call__(self, *args: Any, **kwargs: Any) -> FakeSsdpClient:

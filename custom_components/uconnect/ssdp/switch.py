@@ -17,6 +17,7 @@ from ..coordinator import UconnectConfigEntry
 from ..entity import should_add
 from .coordinator import SsdpDataUpdateCoordinator
 from .entity import SsdpEntity, command_entities_enabled
+from .vehicle import has_battery
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,7 +49,7 @@ SWITCHES: tuple[SsdpSwitchEntityDescription, ...] = (
         icon="mdi:ev-station",
         command=remote.charge_now,
         is_on=lambda v: v.charging,
-        supported=lambda v: v.state_of_charge is not None,
+        supported=has_battery,
     ),
 )
 

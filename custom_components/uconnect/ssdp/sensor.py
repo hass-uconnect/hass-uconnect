@@ -29,10 +29,7 @@ from ..coordinator import UconnectConfigEntry
 from ..entity import should_add
 from .coordinator import SsdpDataUpdateCoordinator
 from .entity import SsdpEntity
-
-
-def _has_battery(v: Vehicle) -> bool:
-    return v.state_of_charge is not None
+from .vehicle import has_battery
 
 
 def _privacy(v: Vehicle) -> str | None:
@@ -75,7 +72,7 @@ SENSORS: tuple[SsdpSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         suggested_display_precision=0,
         # The electric range of vehicles with a battery, like for Uconnect
-        value=lambda v: v.range_electric if _has_battery(v) else v.range_fuel,
+        value=lambda v: v.range_electric if has_battery(v) else v.range_fuel,
     ),
     SsdpSensorEntityDescription(
         key="range_gas",
@@ -84,7 +81,7 @@ SENSORS: tuple[SsdpSensorEntityDescription, ...] = (
         state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         suggested_display_precision=0,
-        value=lambda v: v.range_fuel if _has_battery(v) else None,
+        value=lambda v: v.range_fuel if has_battery(v) else None,
     ),
     SsdpSensorEntityDescription(
         key="range_total",

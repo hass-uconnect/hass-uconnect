@@ -21,7 +21,11 @@ from .frontend_cards import (
     async_unload_frontend_cards_if_last_entry,
 )
 from .services import async_setup_services, async_unload_services
-from .ssdp.coordinator import SsdpDataUpdateCoordinator, async_get_all_coordinators
+from .ssdp.coordinator import (
+    SsdpDataUpdateCoordinator,
+    async_get_all_coordinators,
+    async_release_vehicles,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -128,6 +132,10 @@ async def async_unload_entry(
     )
 
     if unload_ok:
+        # A disabled entry stays unloaded: other entries can take its vehicles
+        if config_entry.disabled_by is not None:
+            async_release_vehicles(hass, config_entry.entry_id)
+
         # The entries left, of both backends: the actions and the vehicle card
         # are shared by their vehicles
         remaining = [
@@ -142,3 +150,11 @@ async def async_unload_entry(
             async_setup_services(hass)
 
     return unload_ok
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, config_entry: UconnectConfigEntry
+) -> None:
+    """Release the vehicles of a removed entry to the other entries"""
+
+    async_release_vehicles(hass, config_entry.entry_id)

@@ -9,9 +9,15 @@ from typing import TYPE_CHECKING
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
+from homeassistant.const import (
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+    Platform,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from stellantis_ssdp import (
@@ -63,6 +69,32 @@ def async_create_login_session(
     )
 
 
+# hass.data[DOMAIN] key of the vehicle owners
+OWNERS = "vehicle_owners"
+
+
+@callback
+def async_vehicle_owners(hass: HomeAssistant) -> dict[str, str]:
+    """The entry providing each vehicle provided by an SSDP entry or shared
+    with one: VIN -> entry ID.
+
+    An owner keeps its vehicles while it reloads or its setup is retried. They
+    are released when the entry is removed or disabled, or no longer lists
+    them (see SsdpDataUpdateCoordinator._update_vehicles).
+    """
+
+    return hass.data.setdefault(DOMAIN, {}).setdefault(OWNERS, {})
+
+
+@callback
+def async_release_vehicles(hass: HomeAssistant, entry_id: str) -> None:
+    """Release the vehicles of an entry removed or disabled"""
+
+    owners = async_vehicle_owners(hass)
+    for vin in [vin for vin, owner in owners.items() if owner == entry_id]:
+        del owners[vin]
+
+
 @callback
 def async_get_all_coordinators(
     hass: HomeAssistant,
@@ -92,9 +124,10 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         self.vehicles: dict[str, Vehicle] = {}
         self._skipped: set[str] = set()
         self._warned_no_vehicles = False
-        # The vehicles the platforms were set up with, known after the first
-        # refresh
+        # The vehicles and the entities the platforms were set up with, known
+        # after the first refresh
         self._platform_vins: frozenset[str] | None = None
+        self._platform_entities: frozenset[tuple[str, str, str]] = frozenset()
         self._reload_scheduled = False
 
         data = config_entry.data
@@ -134,6 +167,12 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
 
         option = bool(config_entry.options.get(CONF_ADD_COMMAND_ENTITIES))
         return option, option and self.client.enrolled
+
+    async def _async_setup(self) -> None:
+        # An entry whose vehicles are all provided by other entries has no
+        # entities, so no listeners: poll anyway, to notice a vehicle handed
+        # over to it
+        self.config_entry.async_on_unload(self.async_add_listener(lambda: None))
 
     @property
     def command_entities(self) -> bool:
@@ -192,53 +231,142 @@ class SsdpDataUpdateCoordinator(DataUpdateCoordinator[bool]):
         One Stellantis account may list the vehicles of several brands, and a
         VIN could also be in a Uconnect account: two entries providing the
         same vehicle would create the same device and entity IDs. A vehicle
-        goes to the Uconnect entry, else to the SSDP entry that shows it
-        already.
+        goes to the Uconnect entry, else to the SSDP entry that owns it (see
+        async_vehicle_owners), else to this entry.
 
-        The platforms only add the entities of the vehicles shown at setup, so
-        the entry is reloaded when a vehicle of the account is taken over from
-        another entry or handed over to one. The Uconnect entries taking over
-        a vehicle are reloaded too: they could not add its entities while this
-        entry had them.
+        The platforms only add the entities of the vehicles and data present
+        at setup, so the entry is reloaded when a vehicle is taken over or
+        handed over (also when the account no longer lists it), or when data
+        for more entities comes in. The Uconnect entries taking over a vehicle
+        are reloaded too: they could not add its entities while this entry
+        had them.
         """
 
+        hass = self.hass
+        own_id = self.config_entry.entry_id
+        owners = async_vehicle_owners(hass)
+        first = self._platform_vins is None
+
+        others = {
+            c.config_entry.entry_id: c
+            for c in async_get_all_coordinators(hass)
+            if c is not self
+        }
         uconnect: dict[str, str] = {}
-        taken: set[str] = set()
-        for other in async_get_all_coordinators(self.hass):
-            if other is self:
-                continue
+        for entry_id, other in others.items():
             if isinstance(other, UconnectDataUpdateCoordinator):
                 for vin in other.client.vehicles:
-                    uconnect.setdefault(vin, other.config_entry.entry_id)
-            else:
-                taken.update(other.vehicles)
+                    uconnect.setdefault(vin, entry_id)
+
+        # Vehicles this entry owns that the account no longer lists: released
+        # once their entities are unloaded, i.e. after the reload below
+        if first:
+            for vin in [v for v, o in owners.items() if o == own_id]:
+                if vin not in self.client.vehicles:
+                    del owners[vin]
 
         vehicles: dict[str, Vehicle] = {}
         for vin, vehicle in self.client.vehicles.items():
-            if vin in uconnect or vin in taken:
-                if vin not in self._skipped:
-                    self._skipped.add(vin)
-                    _LOGGER.warning(
-                        "Vehicle %s of the %s account is already provided by "
-                        "another entry, it is not added again",
-                        vin,
-                        BRANDS[self.config_entry.data[CONF_BRAND_REGION]],
-                    )
+            if vin in uconnect:
+                # Reserved for the Uconnect entry, also while it reloads
+                owners[vin] = uconnect[vin]
+            elif self._owned_by_other(owners.get(vin), vin, others):
+                pass
+            else:
+                owners[vin] = own_id
+                vehicles[vin] = vehicle
                 continue
-            vehicles[vin] = vehicle
+
+            if vin not in self._skipped:
+                self._skipped.add(vin)
+                _LOGGER.warning(
+                    "Vehicle %s of the %s account is already provided by "
+                    "another entry, it is not added again",
+                    vin,
+                    BRANDS[self.config_entry.data[CONF_BRAND_REGION]],
+                )
 
         self.vehicles = vehicles
 
         vins = frozenset(vehicles)
-        if self._platform_vins is None:
+        entities = self._entities(vehicles)
+        if first:
             # The platforms are set up with these
             self._platform_vins = vins
+            self._platform_entities = entities | self._registered(vehicles)
             return
 
-        gained = vins - self._platform_vins
-        lost = {v for v in self._platform_vins - vins if v in self.client.vehicles}
-        if gained or lost:
+        assert self._platform_vins is not None
+        lost = self._platform_vins - vins
+        if vins - self._platform_vins or lost or entities - self._platform_entities:
             self._schedule_reload({uconnect[v] for v in lost if v in uconnect})
+
+    def _owned_by_other(
+        self,
+        owner: str | None,
+        vin: str,
+        others: dict[str, UconnectDataUpdateCoordinator | SsdpDataUpdateCoordinator],
+    ) -> bool:
+        """Whether another entry owns the vehicle"""
+
+        if owner is None or owner == self.config_entry.entry_id:
+            return False
+
+        entry = self.hass.config_entries.async_get_entry(owner)
+        if entry is None or entry.disabled_by is not None:
+            # Removed or disabled
+            return False
+
+        other = others.get(owner)
+        if isinstance(other, UconnectDataUpdateCoordinator):
+            # Loaded and no longer listing it
+            return vin in other.client.vehicles
+
+        # An SSDP entry, or an entry being reloaded or set up again
+        return True
+
+    def _entities(
+        self, vehicles: dict[str, Vehicle]
+    ) -> frozenset[tuple[str, str, str]]:
+        """The (platform, VIN, key) of the entities that depend on the data of
+        the vehicles"""
+
+        # The platform modules import this one
+        from .binary_sensor import BINARY_SENSORS
+        from .sensor import SENSORS
+        from .vehicle import has_battery
+
+        result: set[tuple[str, str, str]] = set()
+        for vin, v in vehicles.items():
+            result.update(
+                (Platform.SENSOR, vin, d.key) for d in SENSORS if d.value(v) is not None
+            )
+            result.update(
+                (Platform.BINARY_SENSOR, vin, d.key)
+                for d in BINARY_SENSORS
+                if d.value(v) is not None
+            )
+            if v.location is not None:
+                result.add((Platform.DEVICE_TRACKER, vin, "location"))
+            if self.command_entities and has_battery(v):
+                result.add((Platform.SWITCH, vin, "switch_charging"))
+
+        return frozenset(result)
+
+    def _registered(
+        self, vehicles: dict[str, Vehicle]
+    ) -> frozenset[tuple[str, str, str]]:
+        """The entities created at setup without data: they were before"""
+
+        registry = er.async_get(self.hass)
+        return frozenset(
+            (e.domain, vin, e.unique_id.removeprefix(f"{DOMAIN}_{vin}_"))
+            for e in er.async_entries_for_config_entry(
+                registry, self.config_entry.entry_id
+            )
+            for vin in vehicles
+            if e.unique_id.startswith(f"{DOMAIN}_{vin}_")
+        )
 
     def _schedule_reload(self, then: set[str] | None = None) -> None:
         """Reload this entry, then the entries ``then``, once the current
